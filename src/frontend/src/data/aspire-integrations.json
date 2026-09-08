@@ -15,7 +15,7 @@
       "inference",
       "ai-search"
     ],
-    "downloads": 136585,
+    "downloads": 136927,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -33,7 +33,7 @@
       "ai",
       "openai"
     ],
-    "downloads": 797138,
+    "downloads": 798095,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -52,7 +52,7 @@
       "table",
       "storage"
     ],
-    "downloads": 3951847,
+    "downloads": 3953565,
     "version": "13.5.3"
   },
   {
@@ -72,7 +72,7 @@
       "messaging",
       "eventing"
     ],
-    "downloads": 741339,
+    "downloads": 743098,
     "version": "13.5.3"
   },
   {
@@ -92,7 +92,7 @@
       "messaging",
       "eventing"
     ],
-    "downloads": 1835773,
+    "downloads": 1840814,
     "version": "13.5.3"
   },
   {
@@ -112,7 +112,7 @@
       "pubsub",
       "messaging"
     ],
-    "downloads": 69869,
+    "downloads": 69889,
     "version": "13.5.3"
   },
   {
@@ -134,7 +134,7 @@
       "database",
       "data"
     ],
-    "downloads": 153891,
+    "downloads": 154437,
     "version": "13.5.3"
   },
   {
@@ -161,7 +161,7 @@
       "npgsql",
       "sql"
     ],
-    "downloads": 407461,
+    "downloads": 409567,
     "version": "13.5.3"
   },
   {
@@ -180,7 +180,7 @@
       "ai",
       "ai-search"
     ],
-    "downloads": 450173,
+    "downloads": 450955,
     "version": "13.5.3"
   },
   {
@@ -199,7 +199,7 @@
       "secrets",
       "security"
     ],
-    "downloads": 1596678,
+    "downloads": 1600804,
     "version": "13.5.3"
   },
   {
@@ -218,7 +218,7 @@
       "blobs",
       "blob"
     ],
-    "downloads": 6894048,
+    "downloads": 6905368,
     "version": "13.5.3"
   },
   {
@@ -237,7 +237,7 @@
       "files",
       "datalake"
     ],
-    "downloads": 5443,
+    "downloads": 5449,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -257,7 +257,7 @@
       "queues",
       "messaging"
     ],
-    "downloads": 1868590,
+    "downloads": 1869770,
     "version": "13.5.3"
   },
   {
@@ -275,7 +275,7 @@
       "messaging",
       "eventing"
     ],
-    "downloads": 2650513,
+    "downloads": 2651181,
     "version": "13.5.3"
   },
   {
@@ -291,7 +291,7 @@
       "cloud",
       "elasticsearch"
     ],
-    "downloads": 77985,
+    "downloads": 78063,
     "version": "13.3.0"
   },
   {
@@ -305,7 +305,7 @@
       "orchestration",
       "polyglot"
     ],
-    "downloads": 35493324,
+    "downloads": 35596036,
     "version": "13.5.3"
   },
   {
@@ -322,7 +322,7 @@
       "ai",
       "agents"
     ],
-    "downloads": 4114,
+    "downloads": 4129,
     "version": "1.20.0-preview.260831.1"
   },
   {
@@ -336,7 +336,7 @@
       "hosting",
       "aws"
     ],
-    "downloads": 781862,
+    "downloads": 783560,
     "version": "13.7.2"
   },
   {
@@ -353,7 +353,7 @@
       "orchestration",
       "polyglot"
     ],
-    "downloads": 8956447,
+    "downloads": 8983929,
     "version": "13.5.3"
   },
   {
@@ -370,7 +370,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 592578,
+    "downloads": 594414,
     "version": "13.5.3"
   },
   {
@@ -388,7 +388,7 @@
       "appcontainers",
       "polyglot"
     ],
-    "downloads": 1233808,
+    "downloads": 1238133,
     "version": "13.5.3"
   },
   {
@@ -407,7 +407,7 @@
       "applicationinsights",
       "polyglot"
     ],
-    "downloads": 967128,
+    "downloads": 970263,
     "version": "13.5.3"
   },
   {
@@ -424,7 +424,7 @@
       "appservice",
       "polyglot"
     ],
-    "downloads": 89258,
+    "downloads": 89668,
     "version": "13.5.3"
   },
   {
@@ -445,7 +445,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 831118,
+    "downloads": 832635,
     "version": "13.5.3"
   },
   {
@@ -463,7 +463,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 925637,
+    "downloads": 930219,
     "version": "13.5.3"
   },
   {
@@ -483,7 +483,7 @@
       "nosql",
       "polyglot"
     ],
-    "downloads": 1597164,
+    "downloads": 1600927,
     "version": "13.5.3"
   },
   {
@@ -502,7 +502,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 634526,
+    "downloads": 636369,
     "version": "13.5.3"
   },
   {
@@ -520,7 +520,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 10251,
+    "downloads": 10265,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -538,7 +538,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 1737194,
+    "downloads": 1742516,
     "version": "13.5.3"
   },
   {
@@ -557,7 +557,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 3312500,
+    "downloads": 3322540,
     "version": "13.5.3"
   },
   {
@@ -574,7 +574,7 @@
       "aks",
       "polyglot"
     ],
-    "downloads": 2720,
+    "downloads": 2756,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -593,7 +593,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 9616,
+    "downloads": 9626,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -615,7 +615,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 416523,
+    "downloads": 419447,
     "version": "13.5.3"
   },
   {
@@ -633,7 +633,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 1625604,
+    "downloads": 1630754,
     "version": "13.5.3"
   },
   {
@@ -652,7 +652,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 806016,
+    "downloads": 808865,
     "version": "13.5.3"
   },
   {
@@ -671,7 +671,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 624604,
+    "downloads": 626049,
     "version": "13.5.3"
   },
   {
@@ -690,7 +690,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 307254,
+    "downloads": 308296,
     "version": "13.5.3"
   },
   {
@@ -709,7 +709,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 2442878,
+    "downloads": 2451164,
     "version": "13.5.3"
   },
   {
@@ -727,7 +727,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 328155,
+    "downloads": 328955,
     "version": "13.5.3"
   },
   {
@@ -746,7 +746,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 941081,
+    "downloads": 944024,
     "version": "13.5.3"
   },
   {
@@ -766,7 +766,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 6249909,
+    "downloads": 6270875,
     "version": "13.5.3"
   },
   {
@@ -786,7 +786,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 38813,
+    "downloads": 38834,
     "version": "13.5.3"
   },
   {
@@ -803,7 +803,7 @@
       "gateway",
       "polyglot"
     ],
-    "downloads": 4315,
+    "downloads": 4365,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -821,7 +821,7 @@
       "diagnostics",
       "polyglot"
     ],
-    "downloads": 158298,
+    "downloads": 158980,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -837,7 +837,7 @@
       "database",
       "data"
     ],
-    "downloads": 27559,
+    "downloads": 27882,
     "version": "13.5.3"
   },
   {
@@ -846,7 +846,7 @@
     "icon": "https://api.nuget.org/v3-flatcontainer/aspire.hosting.codegeneration.go/13.5.3/icon",
     "href": "https://www.nuget.org/packages/Aspire.Hosting.CodeGeneration.Go",
     "tags": [],
-    "downloads": 9817,
+    "downloads": 9961,
     "version": "13.5.3"
   },
   {
@@ -855,7 +855,7 @@
     "icon": "https://api.nuget.org/v3-flatcontainer/aspire.hosting.codegeneration.java/13.5.3/icon",
     "href": "https://www.nuget.org/packages/Aspire.Hosting.CodeGeneration.Java",
     "tags": [],
-    "downloads": 2832,
+    "downloads": 2833,
     "version": "13.5.3"
   },
   {
@@ -864,7 +864,7 @@
     "icon": "https://api.nuget.org/v3-flatcontainer/aspire.hosting.codegeneration.python/13.5.3/icon",
     "href": "https://www.nuget.org/packages/Aspire.Hosting.CodeGeneration.Python",
     "tags": [],
-    "downloads": 2783,
+    "downloads": 2785,
     "version": "13.5.3"
   },
   {
@@ -873,7 +873,7 @@
     "icon": "https://api.nuget.org/v3-flatcontainer/aspire.hosting.codegeneration.rust/13.5.3/icon",
     "href": "https://www.nuget.org/packages/Aspire.Hosting.CodeGeneration.Rust",
     "tags": [],
-    "downloads": 2726,
+    "downloads": 2727,
     "version": "13.5.3"
   },
   {
@@ -882,7 +882,7 @@
     "icon": "https://api.nuget.org/v3-flatcontainer/aspire.hosting.codegeneration.typescript/13.5.3/icon",
     "href": "https://www.nuget.org/packages/Aspire.Hosting.CodeGeneration.TypeScript",
     "tags": [],
-    "downloads": 65490,
+    "downloads": 65802,
     "version": "13.5.3"
   },
   {
@@ -896,7 +896,7 @@
       "devtunnels",
       "polyglot"
     ],
-    "downloads": 524499,
+    "downloads": 525885,
     "version": "13.5.3"
   },
   {
@@ -911,7 +911,7 @@
       "docker-compose",
       "polyglot"
     ],
-    "downloads": 691877,
+    "downloads": 694151,
     "version": "13.5.3"
   },
   {
@@ -929,7 +929,7 @@
       "azure",
       "database"
     ],
-    "downloads": 1218,
+    "downloads": 1219,
     "version": "0.116.0"
   },
   {
@@ -947,7 +947,7 @@
       "runtime",
       "polyglot"
     ],
-    "downloads": 1012,
+    "downloads": 1030,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -961,7 +961,7 @@
       "hosting",
       "elasticsearch"
     ],
-    "downloads": 428509,
+    "downloads": 429487,
     "version": "13.3.0"
   },
   {
@@ -980,7 +980,7 @@
       "database",
       "polyglot"
     ],
-    "downloads": 29630,
+    "downloads": 30011,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1001,7 +1001,7 @@
       "cloud",
       "polyglot"
     ],
-    "downloads": 54963,
+    "downloads": 55403,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1018,7 +1018,7 @@
       "caching",
       "polyglot"
     ],
-    "downloads": 112202,
+    "downloads": 112678,
     "version": "13.5.3"
   },
   {
@@ -1035,7 +1035,7 @@
       "ai",
       "polyglot"
     ],
-    "downloads": 30351,
+    "downloads": 30383,
     "version": "13.5.3"
   },
   {
@@ -1053,7 +1053,7 @@
       "runtime",
       "polyglot"
     ],
-    "downloads": 5273,
+    "downloads": 5334,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1067,7 +1067,7 @@
       "analyzers",
       "ats"
     ],
-    "downloads": 5017,
+    "downloads": 5021,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1086,7 +1086,7 @@
       "runtime",
       "polyglot"
     ],
-    "downloads": 3797488,
+    "downloads": 3820074,
     "version": "13.5.3"
   },
   {
@@ -1103,7 +1103,7 @@
       "eventing",
       "polyglot"
     ],
-    "downloads": 1319616,
+    "downloads": 1324192,
     "version": "13.5.3"
   },
   {
@@ -1121,7 +1121,7 @@
       "security",
       "polyglot"
     ],
-    "downloads": 872857,
+    "downloads": 876222,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1135,7 +1135,7 @@
       "kubernetes",
       "polyglot"
     ],
-    "downloads": 238222,
+    "downloads": 239846,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1149,7 +1149,7 @@
       "hosting",
       "polyglot"
     ],
-    "downloads": 40306,
+    "downloads": 40443,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1169,7 +1169,7 @@
       "ai-search",
       "polyglot"
     ],
-    "downloads": 14468,
+    "downloads": 14495,
     "version": "13.5.3"
   },
   {
@@ -1186,7 +1186,7 @@
       "data",
       "polyglot"
     ],
-    "downloads": 1020600,
+    "downloads": 1023597,
     "version": "13.5.3"
   },
   {
@@ -1203,7 +1203,7 @@
       "data",
       "polyglot"
     ],
-    "downloads": 384134,
+    "downloads": 384914,
     "version": "13.5.3"
   },
   {
@@ -1220,7 +1220,7 @@
       "eventing",
       "polyglot"
     ],
-    "downloads": 233389,
+    "downloads": 234503,
     "version": "13.5.3"
   },
   {
@@ -1236,7 +1236,7 @@
       "ai",
       "polyglot"
     ],
-    "downloads": 45910,
+    "downloads": 45975,
     "version": "13.5.3"
   },
   {
@@ -1254,7 +1254,7 @@
       "data",
       "polyglot"
     ],
-    "downloads": 95738,
+    "downloads": 96074,
     "version": "13.5.3"
   },
   {
@@ -1271,7 +1271,7 @@
       "eventing",
       "polyglot"
     ],
-    "downloads": 362521,
+    "downloads": 363135,
     "version": "13.5.3"
   },
   {
@@ -1291,7 +1291,7 @@
       "data",
       "polyglot"
     ],
-    "downloads": 7724808,
+    "downloads": 7753554,
     "version": "13.5.3"
   },
   {
@@ -1308,7 +1308,7 @@
       "runtime",
       "polyglot"
     ],
-    "downloads": 372189,
+    "downloads": 373197,
     "version": "13.5.3"
   },
   {
@@ -1327,7 +1327,7 @@
       "data",
       "polyglot"
     ],
-    "downloads": 149302,
+    "downloads": 149648,
     "version": "13.5.3"
   },
   {
@@ -1344,7 +1344,7 @@
       "eventing",
       "polyglot"
     ],
-    "downloads": 3123619,
+    "downloads": 3133643,
     "version": "13.5.3"
   },
   {
@@ -1361,7 +1361,7 @@
       "deployment",
       "polyglot"
     ],
-    "downloads": 245,
+    "downloads": 246,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1378,7 +1378,7 @@
       "caching",
       "polyglot"
     ],
-    "downloads": 7598431,
+    "downloads": 7620886,
     "version": "13.5.3"
   },
   {
@@ -1395,7 +1395,7 @@
       "logging",
       "polyglot"
     ],
-    "downloads": 545434,
+    "downloads": 547256,
     "version": "13.5.3"
   },
   {
@@ -1413,7 +1413,7 @@
       "data",
       "polyglot"
     ],
-    "downloads": 7619883,
+    "downloads": 7644971,
     "version": "13.5.3"
   },
   {
@@ -1430,7 +1430,7 @@
       "caching",
       "polyglot"
     ],
-    "downloads": 696466,
+    "downloads": 698762,
     "version": "13.5.3"
   },
   {
@@ -1447,7 +1447,7 @@
       "api",
       "polyglot"
     ],
-    "downloads": 511586,
+    "downloads": 514097,
     "version": "13.5.3"
   },
   {
@@ -1466,7 +1466,7 @@
       "identity",
       "security"
     ],
-    "downloads": 612742,
+    "downloads": 614380,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1488,7 +1488,7 @@
       "db",
       "nosql"
     ],
-    "downloads": 1477940,
+    "downloads": 1480945,
     "version": "13.5.3"
   },
   {
@@ -1507,7 +1507,7 @@
       "cache",
       "caching"
     ],
-    "downloads": 124956,
+    "downloads": 125648,
     "version": "13.5.3"
   },
   {
@@ -1526,7 +1526,7 @@
       "sqlserver",
       "sql"
     ],
-    "downloads": 1930773,
+    "downloads": 1932415,
     "version": "13.5.3"
   },
   {
@@ -1553,7 +1553,7 @@
       "cosmosdb",
       "nosql"
     ],
-    "downloads": 235829,
+    "downloads": 236186,
     "version": "13.5.3"
   },
   {
@@ -1578,7 +1578,7 @@
       "sqlserver",
       "sql"
     ],
-    "downloads": 6030212,
+    "downloads": 6045416,
     "version": "13.5.3"
   },
   {
@@ -1596,7 +1596,7 @@
       "configuration",
       "appconfiguration"
     ],
-    "downloads": 728743,
+    "downloads": 731530,
     "version": "13.5.3"
   },
   {
@@ -1616,7 +1616,7 @@
       "search",
       "ai-search"
     ],
-    "downloads": 9399,
+    "downloads": 9401,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1634,7 +1634,7 @@
       "database",
       "mongodb"
     ],
-    "downloads": 404896,
+    "downloads": 405669,
     "version": "13.5.3"
   },
   {
@@ -1652,7 +1652,7 @@
       "database",
       "mongodb"
     ],
-    "downloads": 4946,
+    "downloads": 4950,
     "version": "13.5.3"
   },
   {
@@ -1676,7 +1676,7 @@
       "o/rm",
       "mongodb"
     ],
-    "downloads": 6882,
+    "downloads": 6887,
     "version": "13.5.3"
   },
   {
@@ -1696,7 +1696,7 @@
       "mysql",
       "sql"
     ],
-    "downloads": 2470964,
+    "downloads": 2471031,
     "version": "13.5.3"
   },
   {
@@ -1714,7 +1714,7 @@
       "messaging",
       "eventing"
     ],
-    "downloads": 183373,
+    "downloads": 183890,
     "version": "13.5.3"
   },
   {
@@ -1735,7 +1735,7 @@
       "npgsql",
       "sql"
     ],
-    "downloads": 3541539,
+    "downloads": 3545995,
     "version": "13.5.3"
   },
   {
@@ -1762,7 +1762,7 @@
       "npgsql",
       "sql"
     ],
-    "downloads": 6936552,
+    "downloads": 6951385,
     "version": "13.5.3"
   },
   {
@@ -1779,7 +1779,7 @@
       "ai",
       "openai"
     ],
-    "downloads": 724104,
+    "downloads": 725152,
     "version": "13.5.3-preview.1.26425.3"
   },
   {
@@ -1804,7 +1804,7 @@
       "oracle",
       "sql"
     ],
-    "downloads": 249676,
+    "downloads": 249799,
     "version": "13.5.3"
   },
   {
@@ -1830,7 +1830,7 @@
       "mysql",
       "sql"
     ],
-    "downloads": 419202,
+    "downloads": 419414,
     "version": "13.5.3"
   },
   {
@@ -1849,7 +1849,7 @@
       "database",
       "ai-search"
     ],
-    "downloads": 122940,
+    "downloads": 123167,
     "version": "13.5.3"
   },
   {
@@ -1870,7 +1870,7 @@
       "messaging",
       "eventing"
     ],
-    "downloads": 1184631,
+    "downloads": 1187546,
     "version": "13.5.3"
   },
   {
@@ -1891,7 +1891,7 @@
       "messaging",
       "eventing"
     ],
-    "downloads": 5281,
+    "downloads": 5284,
     "version": "13.5.3"
   },
   {
@@ -1909,7 +1909,7 @@
       "observability",
       "logging"
     ],
-    "downloads": 530089,
+    "downloads": 530964,
     "version": "13.5.3"
   },
   {
@@ -1927,7 +1927,7 @@
       "caching",
       "redis"
     ],
-    "downloads": 11699662,
+    "downloads": 11715045,
     "version": "13.5.3"
   },
   {
@@ -1947,7 +1947,7 @@
       "distributedcache",
       "redis"
     ],
-    "downloads": 3331122,
+    "downloads": 3338821,
     "version": "13.5.3"
   },
   {
@@ -1968,7 +1968,7 @@
       "outputcache",
       "redis"
     ],
-    "downloads": 972259,
+    "downloads": 973870,
     "version": "13.5.3"
   },
   {
@@ -1982,7 +1982,7 @@
       "typesystem",
       "polyglot"
     ],
-    "downloads": 75452,
+    "downloads": 75909,
     "version": "13.5.3"
   },
   {
@@ -2000,7 +2000,7 @@
       "secret-manager",
       "client"
     ],
-    "downloads": 1393,
+    "downloads": 1432,
     "version": "13.5.0"
   },
   {
@@ -2019,7 +2019,7 @@
       "olap",
       "ado.net"
     ],
-    "downloads": 1456,
+    "downloads": 1469,
     "version": "13.5.0"
   },
   {
@@ -2035,7 +2035,7 @@
       "gofeatureflag",
       "client"
     ],
-    "downloads": 49945,
+    "downloads": 49981,
     "version": "13.5.0"
   },
   {
@@ -2052,7 +2052,7 @@
       "activemq",
       "polyglot"
     ],
-    "downloads": 73913,
+    "downloads": 74019,
     "version": "13.5.0"
   },
   {
@@ -2069,7 +2069,7 @@
       "adminer",
       "polyglot"
     ],
-    "downloads": 262133,
+    "downloads": 263315,
     "version": "13.5.0"
   },
   {
@@ -2087,7 +2087,7 @@
       "azure",
       "polyglot"
     ],
-    "downloads": 90495,
+    "downloads": 90690,
     "version": "13.0.0"
   },
   {
@@ -2108,7 +2108,7 @@
       "pubsub",
       "polyglot"
     ],
-    "downloads": 53628,
+    "downloads": 53664,
     "version": "13.0.0"
   },
   {
@@ -2126,7 +2126,7 @@
       "hosting",
       "polyglot"
     ],
-    "downloads": 68986,
+    "downloads": 69036,
     "version": "13.5.0"
   },
   {
@@ -2144,7 +2144,7 @@
       "extensions",
       "polyglot"
     ],
-    "downloads": 6203,
+    "downloads": 6233,
     "version": "13.5.0"
   },
   {
@@ -2163,7 +2163,7 @@
       "secret-manager",
       "polyglot"
     ],
-    "downloads": 1197,
+    "downloads": 1225,
     "version": "13.5.0"
   },
   {
@@ -2182,7 +2182,7 @@
       "deprecated",
       "polyglot"
     ],
-    "downloads": 106171,
+    "downloads": 106469,
     "version": "13.5.0"
   },
   {
@@ -2199,7 +2199,7 @@
       "dapr",
       "polyglot"
     ],
-    "downloads": 715658,
+    "downloads": 717410,
     "version": "13.0.0"
   },
   {
@@ -2213,7 +2213,7 @@
       "communitytoolkit",
       "dotnetcommunitytoolkit"
     ],
-    "downloads": 4690,
+    "downloads": 4691,
     "version": "9.1.1-beta.197"
   },
   {
@@ -2230,7 +2230,7 @@
       "dbgate",
       "polyglot"
     ],
-    "downloads": 318346,
+    "downloads": 319659,
     "version": "13.5.0"
   },
   {
@@ -2247,7 +2247,7 @@
       "dbx",
       "polyglot"
     ],
-    "downloads": 7949,
+    "downloads": 8550,
     "version": "13.5.0"
   },
   {
@@ -2264,7 +2264,7 @@
       "deno",
       "polyglot"
     ],
-    "downloads": 70642,
+    "downloads": 70687,
     "version": "13.5.0"
   },
   {
@@ -2283,7 +2283,7 @@
       "olap",
       "polyglot"
     ],
-    "downloads": 1446,
+    "downloads": 1459,
     "version": "13.5.0"
   },
   {
@@ -2301,7 +2301,7 @@
       "elasticvue",
       "polyglot"
     ],
-    "downloads": 6982,
+    "downloads": 7035,
     "version": "13.5.0"
   },
   {
@@ -2320,7 +2320,7 @@
       "openfeature",
       "polyglot"
     ],
-    "downloads": 25354,
+    "downloads": 25416,
     "version": "13.5.0"
   },
   {
@@ -2345,7 +2345,7 @@
       "tls",
       "polyglot"
     ],
-    "downloads": 537,
+    "downloads": 568,
     "version": "13.5.0"
   },
   {
@@ -2363,7 +2363,7 @@
       "migration",
       "polyglot"
     ],
-    "downloads": 49353,
+    "downloads": 49772,
     "version": "13.5.0"
   },
   {
@@ -2380,7 +2380,7 @@
       "gofeatureflag",
       "polyglot"
     ],
-    "downloads": 48279,
+    "downloads": 48312,
     "version": "13.5.0"
   },
   {
@@ -2397,7 +2397,7 @@
       "java",
       "polyglot"
     ],
-    "downloads": 77741,
+    "downloads": 77818,
     "version": "13.5.0"
   },
   {
@@ -2418,7 +2418,7 @@
       "npm",
       "polyglot"
     ],
-    "downloads": 164755,
+    "downloads": 165146,
     "version": "13.5.0"
   },
   {
@@ -2437,7 +2437,7 @@
       "cluster",
       "polyglot"
     ],
-    "downloads": 1298,
+    "downloads": 1328,
     "version": "13.5.0"
   },
   {
@@ -2454,7 +2454,7 @@
       "k6",
       "polyglot"
     ],
-    "downloads": 63208,
+    "downloads": 63274,
     "version": "13.5.0"
   },
   {
@@ -2473,7 +2473,7 @@
       "extensions",
       "polyglot"
     ],
-    "downloads": 17407,
+    "downloads": 17508,
     "version": "13.5.1-beta.748"
   },
   {
@@ -2494,7 +2494,7 @@
       "podman",
       "polyglot"
     ],
-    "downloads": 738,
+    "downloads": 752,
     "version": "13.5.1-beta.748"
   },
   {
@@ -2511,7 +2511,7 @@
       "kurrentdb",
       "polyglot"
     ],
-    "downloads": 17252,
+    "downloads": 17300,
     "version": "13.5.0"
   },
   {
@@ -2528,7 +2528,7 @@
       "lavinmq",
       "polyglot"
     ],
-    "downloads": 49037,
+    "downloads": 49153,
     "version": "13.5.0"
   },
   {
@@ -2548,7 +2548,7 @@
       "marketing",
       "polyglot"
     ],
-    "downloads": 819,
+    "downloads": 839,
     "version": "13.5.0"
   },
   {
@@ -2568,7 +2568,7 @@
       "extensions",
       "polyglot"
     ],
-    "downloads": 1319,
+    "downloads": 1341,
     "version": "13.5.0"
   },
   {
@@ -2586,7 +2586,7 @@
       "hosting",
       "polyglot"
     ],
-    "downloads": 360009,
+    "downloads": 361423,
     "version": "13.5.0"
   },
   {
@@ -2605,7 +2605,7 @@
       "hosting",
       "polyglot"
     ],
-    "downloads": 70460,
+    "downloads": 70658,
     "version": "13.5.0"
   },
   {
@@ -2622,7 +2622,7 @@
       "meilisearch",
       "polyglot"
     ],
-    "downloads": 72732,
+    "downloads": 72818,
     "version": "13.5.0"
   },
   {
@@ -2642,7 +2642,7 @@
       "deprecated",
       "polyglot"
     ],
-    "downloads": 181582,
+    "downloads": 182021,
     "version": "13.5.0"
   },
   {
@@ -2660,7 +2660,7 @@
       "dbgate",
       "polyglot"
     ],
-    "downloads": 85079,
+    "downloads": 85172,
     "version": "13.5.0"
   },
   {
@@ -2679,7 +2679,7 @@
       "messaging",
       "polyglot"
     ],
-    "downloads": 315,
+    "downloads": 329,
     "version": "13.5.0"
   },
   {
@@ -2697,7 +2697,7 @@
       "dbgate",
       "polyglot"
     ],
-    "downloads": 46143,
+    "downloads": 46222,
     "version": "13.5.0"
   },
   {
@@ -2715,7 +2715,7 @@
       "tunnels",
       "polyglot"
     ],
-    "downloads": 191078,
+    "downloads": 191586,
     "version": "13.5.0"
   },
   {
@@ -2733,7 +2733,7 @@
       "ai",
       "polyglot"
     ],
-    "downloads": 382709,
+    "downloads": 384006,
     "version": "13.5.0"
   },
   {
@@ -2751,7 +2751,7 @@
       "observability",
       "polyglot"
     ],
-    "downloads": 61754,
+    "downloads": 62126,
     "version": "13.5.0"
   },
   {
@@ -2769,7 +2769,7 @@
       "hosting",
       "polyglot"
     ],
-    "downloads": 61746,
+    "downloads": 61808,
     "version": "13.5.0"
   },
   {
@@ -2786,7 +2786,7 @@
       "perl",
       "polyglot"
     ],
-    "downloads": 1823,
+    "downloads": 1849,
     "version": "13.5.0"
   },
   {
@@ -2806,7 +2806,7 @@
       "delivery",
       "polyglot"
     ],
-    "downloads": 337,
+    "downloads": 352,
     "version": "13.5.0"
   },
   {
@@ -2824,7 +2824,7 @@
       "dbgate",
       "polyglot"
     ],
-    "downloads": 107710,
+    "downloads": 108067,
     "version": "13.5.0"
   },
   {
@@ -2844,7 +2844,7 @@
       "hosting",
       "polyglot"
     ],
-    "downloads": 65296,
+    "downloads": 65452,
     "version": "13.5.0"
   },
   {
@@ -2862,7 +2862,7 @@
       "python",
       "polyglot"
     ],
-    "downloads": 77531,
+    "downloads": 77562,
     "version": "13.5.0"
   },
   {
@@ -2879,7 +2879,7 @@
       "ravendb",
       "polyglot"
     ],
-    "downloads": 70982,
+    "downloads": 71089,
     "version": "13.5.0"
   },
   {
@@ -2897,7 +2897,7 @@
       "dbgate",
       "polyglot"
     ],
-    "downloads": 77555,
+    "downloads": 77696,
     "version": "13.5.0"
   },
   {
@@ -2917,7 +2917,7 @@
       "messaging",
       "polyglot"
     ],
-    "downloads": 376,
+    "downloads": 390,
     "version": "13.5.0"
   },
   {
@@ -2934,7 +2934,7 @@
       "rust",
       "polyglot"
     ],
-    "downloads": 70050,
+    "downloads": 70140,
     "version": "13.5.0"
   },
   {
@@ -2953,7 +2953,7 @@
       "s3-compatible",
       "polyglot"
     ],
-    "downloads": 2338,
+    "downloads": 2386,
     "version": "13.5.0"
   },
   {
@@ -2973,7 +2973,7 @@
       "s3",
       "polyglot"
     ],
-    "downloads": 1535,
+    "downloads": 1568,
     "version": "13.5.0"
   },
   {
@@ -2991,7 +2991,7 @@
       "hosting",
       "polyglot"
     ],
-    "downloads": 9487,
+    "downloads": 9533,
     "version": "13.5.0"
   },
   {
@@ -3009,7 +3009,7 @@
       "search",
       "polyglot"
     ],
-    "downloads": 14907,
+    "downloads": 14960,
     "version": "13.5.0"
   },
   {
@@ -3027,7 +3027,7 @@
       "sqlproj",
       "polyglot"
     ],
-    "downloads": 339386,
+    "downloads": 340313,
     "version": "13.5.0"
   },
   {
@@ -3045,7 +3045,7 @@
       "sqlite",
       "polyglot"
     ],
-    "downloads": 93073,
+    "downloads": 93171,
     "version": "13.5.0"
   },
   {
@@ -3063,7 +3063,7 @@
       "dbgate",
       "polyglot"
     ],
-    "downloads": 213533,
+    "downloads": 214334,
     "version": "13.5.0"
   },
   {
@@ -3083,7 +3083,7 @@
       "copilot",
       "polyglot"
     ],
-    "downloads": 1126,
+    "downloads": 1148,
     "version": "13.5.0"
   },
   {
@@ -3103,7 +3103,7 @@
       "huggingface",
       "polyglot"
     ],
-    "downloads": 307,
+    "downloads": 322,
     "version": "13.5.0"
   },
   {
@@ -3122,7 +3122,7 @@
       "webhooks",
       "polyglot"
     ],
-    "downloads": 12467,
+    "downloads": 12501,
     "version": "13.5.0"
   },
   {
@@ -3139,7 +3139,7 @@
       "surrealdb",
       "polyglot"
     ],
-    "downloads": 21884,
+    "downloads": 21932,
     "version": "13.5.0"
   },
   {
@@ -3156,7 +3156,7 @@
       "umami",
       "polyglot"
     ],
-    "downloads": 2282,
+    "downloads": 2300,
     "version": "13.5.0"
   },
   {
@@ -3178,7 +3178,7 @@
       "oidc",
       "polyglot"
     ],
-    "downloads": 2282,
+    "downloads": 2319,
     "version": "13.5.0"
   },
   {
@@ -3194,7 +3194,7 @@
       "kurrentdb",
       "client"
     ],
-    "downloads": 12562,
+    "downloads": 12581,
     "version": "13.5.0"
   },
   {
@@ -3213,7 +3213,7 @@
       "oidc",
       "jwt"
     ],
-    "downloads": 1320,
+    "downloads": 1333,
     "version": "13.5.0"
   },
   {
@@ -3230,7 +3230,7 @@
       "masstransit",
       "rabbitmq"
     ],
-    "downloads": 83227,
+    "downloads": 83319,
     "version": "13.5.0"
   },
   {
@@ -3246,7 +3246,7 @@
       "meilisearch",
       "client"
     ],
-    "downloads": 83142,
+    "downloads": 83224,
     "version": "13.5.0"
   },
   {
@@ -3264,7 +3264,7 @@
       "data",
       "ado.net"
     ],
-    "downloads": 56078,
+    "downloads": 56114,
     "version": "13.5.0"
   },
   {
@@ -3285,7 +3285,7 @@
       "ef",
       "orm"
     ],
-    "downloads": 65682,
+    "downloads": 65710,
     "version": "9.7.2"
   },
   {
@@ -3304,7 +3304,7 @@
       "storage",
       "deprecated"
     ],
-    "downloads": 85079,
+    "downloads": 85259,
     "version": "13.5.0"
   },
   {
@@ -3322,7 +3322,7 @@
       "ollamasharp",
       "client"
     ],
-    "downloads": 471720,
+    "downloads": 472855,
     "version": "13.5.0"
   },
   {
@@ -3339,7 +3339,7 @@
       "email",
       "client"
     ],
-    "downloads": 307,
+    "downloads": 322,
     "version": "13.5.0"
   },
   {
@@ -3355,7 +3355,7 @@
       "client",
       "ravendb"
     ],
-    "downloads": 71394,
+    "downloads": 71437,
     "version": "13.5.0"
   },
   {
@@ -3374,7 +3374,7 @@
       "storage",
       "s3"
     ],
-    "downloads": 996,
+    "downloads": 1010,
     "version": "13.5.0"
   },
   {
@@ -3390,7 +3390,7 @@
       "sftp",
       "client"
     ],
-    "downloads": 4482,
+    "downloads": 4508,
     "version": "13.5.0"
   },
   {
@@ -3406,7 +3406,7 @@
       "surrealdb",
       "client"
     ],
-    "downloads": 21195,
+    "downloads": 21232,
     "version": "13.5.0"
   }
 ]
