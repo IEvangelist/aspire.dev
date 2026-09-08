@@ -33,7 +33,7 @@ Two `BackgroundService` workers keep the state honest belt-and-braces:
 | Worker                    | Push                      | Confirming poll                                   |
 |---------------------------|---------------------------|---------------------------------------------------|
 | `TwitchEventSubService`   | EventSub `stream.online/offline` | `/streams?user_id=` reconcile every 30 min |
-| `YouTubeWebSubService`    | PubSubHubbub `videos.xml` push   | `search.list?eventType=live` every 2 min   |
+| `YouTubeWebSubService`    | PubSubHubbub `videos.xml` push   | `videos.list` every 2 min while live; `search.list` every 30 min while idle |
 
 Webhook handlers are pure (`bytes + headers -> StateUpdate`) and unit-
 testable. Outgoing HTTP is performed by named, resilient
@@ -42,10 +42,9 @@ testable. Outgoing HTTP is performed by named, resilient
 
 ## Configuration
 
-Bind from the `Live` section of configuration. All secrets are non-fatal:
-if a key is missing the corresponding worker logs a warning at startup
-and the SSE endpoint returns `{ isLive: false }` until configuration
-is provided.
+Bind from the `Live` section of configuration. In unconfigured local runs,
+the corresponding worker logs a warning at startup and remains idle.
+The SSE endpoint reports offline unless a local simulation sets live state.
 
 ```json
 "Live": {
@@ -73,13 +72,49 @@ is provided.
 }
 ```
 
-In publish mode, the AppHost provisions the `liveconfig` Azure Key Vault,
-writes every production `Live` value from deployment parameters, and injects
-Key Vault secret references into StaticHost. Provider credentials and webhook
-secrets are secret parameters. The Twitch and YouTube channel IDs are required
-deployment parameters; the remaining non-sensitive settings have the defaults
-shown above. The generated App Service site is limited to one worker because
-live snapshots and webhook subscription state are coordinated in memory.
+### Production Key Vault
+
+In publish mode, the AppHost provisions an empty, shared `siteconfig` Azure
+Key Vault resource for site-wide configuration. The vault is not limited to
+live streaming. StaticHost receives read-only references to the individual
+`live-*` secrets and the **Key Vault Secrets User** role. Neither the AppHost
+nor StaticHost creates, updates, or deletes secret values, and the AppHost no
+longer accepts secret-value deployment parameters.
+
+An authorized operator must populate the following secrets separately in the
+provisioned vault. Use the actual Azure vault name from deployment outputs,
+not the Aspire resource name. Keep unrelated site settings under their own
+names; the live feature references only this list.
+
+| Secret name | Value to supply |
+| --- | --- |
+| `live-public-base-url` | Public HTTPS origin, normally `https://aspire.dev` |
+| `live-coalesce-window-ms` | `750` |
+| `live-twitch-client-id` | Twitch application client ID |
+| `live-twitch-client-secret` | Twitch application client secret |
+| `live-twitch-webhook-secret` | Independently generated EventSub signing secret |
+| `live-twitch-channel-login` | `aspiredotdev` |
+| `live-twitch-channel-id` | Numeric Twitch broadcaster ID |
+| `live-twitch-reconcile-interval-seconds` | `1800` |
+| `live-youtube-api-key` | YouTube Data API key |
+| `live-youtube-webhook-secret` | Independently generated WebSub signing secret |
+| `live-youtube-channel-handle` | `@aspiredotdev` |
+| `live-youtube-channel-id` | YouTube channel ID |
+| `live-youtube-polling-interval-seconds` | `120` |
+| `live-youtube-discovery-polling-interval-seconds` | `1800` |
+| `live-youtube-offline-confirmation-count` | `2` |
+
+App Service resolves the Key Vault references into environment variables.
+StaticHost binds those values at startup; it does not contact Key Vault for
+each snapshot, SSE connection, or provider request. Populate all referenced
+values before using the production feature: an unresolved reference is not
+equivalent to an absent setting and does not fall back to the local defaults.
+After changing values, refresh the App Service references and restart the
+application so its bound configuration is reloaded. Rotating webhook signing
+secrets also requires recreating the corresponding provider subscriptions.
+
+The generated App Service site is limited to one worker because live snapshots
+and webhook subscription state are coordinated in memory.
 
 `EnableDevEndpoint` and `DevCommandSecret` are intentionally excluded from the
 vault. The AppHost creates those values only for local dashboard-command
@@ -90,7 +125,7 @@ testing, and the production host never enables the dev endpoint.
 | Method | Path                            | Description                                                          |
 |--------|---------------------------------|----------------------------------------------------------------------|
 | GET    | `/api/live`                     | Current snapshot, `Cache-Control: no-store`                          |
-| GET    | `/api/live/stream`              | Server-Sent Events: `state` and `meta` events, 15s heartbeat        |
+| GET    | `/api/live/stream`              | Server-Sent Events: `state` events, 15s heartbeat        |
 | POST   | `/api/live/twitch/webhook`      | Twitch EventSub callback. HMAC-SHA256 verified.                      |
 | GET    | `/api/live/youtube/webhook`     | WebSub verification (`hub.challenge`)                                |
 | POST   | `/api/live/youtube/webhook`     | WebSub notification. HMAC-SHA1 verified, then confirming poll. In AppHost dev mode without a YouTube API key, signed local notifications update from the Atom payload. |
@@ -112,9 +147,17 @@ live" announcement happens. The broadcaster:
 - Coalesces outgoing SSE events with a configurable window
   (default 750 ms). If both sources flip in that window the subscriber
   receives **one** combined update.
-- Emits `state` events on real changes and `meta` events on transient
-  field-only changes (e.g. `videoId` updated mid-stream); animation in
-  the client only triggers on `state`.
+- Serializes each published snapshot into one UTF-8 `state` frame, shared by
+  existing and newly connected subscribers. Unchanged snapshots do not
+  allocate another frame or restart the coalescing timer.
+- Uses one periodic heartbeat timer per SSE connection and retains the
+  outstanding channel read between ticks, rather than cancelling a read
+  for every idle heartbeat.
+
+The videos page autoplays only the selected provider. Idle embeds are not
+reloaded when the initial snapshot arrives, and an unchanged PiP source reuses
+its existing iframe. Chooser event listeners are removed before client-side
+page swaps so repeated navigation does not retain old dialogs.
 
 ## Local testing
 

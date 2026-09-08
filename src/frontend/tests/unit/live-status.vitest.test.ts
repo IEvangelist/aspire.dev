@@ -1,7 +1,7 @@
 // Tests the pure logic of live-status.ts that does not require DOM/SSE.
 // (Full SSE + DOM coverage is in the Playwright e2e spec.)
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getCurrent, subscribe, type LiveSnapshot } from '../../src/components/live-status.ts';
 
 describe('live-status module', () => {
@@ -11,6 +11,74 @@ describe('live-status module', () => {
     expect(snap.primarySource).toBeNull();
     expect(snap.twitch.live).toBe(false);
     expect(snap.youtube.live).toBe(false);
+  });
+
+  describe('live-status update deduplication', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('ignores a duplicate seed and title-only metadata, but delivers changed video IDs', async () => {
+      vi.resetModules();
+      const document = Object.assign(new EventTarget(), {
+        readyState: 'complete',
+        querySelectorAll: () => [],
+      });
+      const sources: EventTarget[] = [];
+      vi.stubGlobal('document', document);
+      vi.stubGlobal('window', { location: { pathname: '/docs/' } });
+      vi.stubGlobal(
+        'EventSource',
+        class extends EventTarget {
+          constructor() {
+            super();
+            sources.push(this);
+          }
+          close() {}
+        }
+      );
+      const seed = Promise.withResolvers<Response>();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => seed.promise)
+      );
+      const live = await import('../../src/components/live-status.ts');
+      const received: LiveSnapshot[] = [];
+      const unsubscribe = live.subscribe((snapshot) => received.push(snapshot));
+      const snapshot: LiveSnapshot = {
+        isLive: true,
+        primarySource: 'youtube',
+        twitch: { live: false, channel: null },
+        youtube: { live: true, videoId: 'first-video' },
+        liveSessionId: 'session-1',
+        updatedAt: '2026-09-08T12:00:00Z',
+      };
+      expect(sources).toHaveLength(1);
+      sources[0].dispatchEvent(new MessageEvent('state', { data: JSON.stringify(snapshot) }));
+      const newerSeed = { ...snapshot, updatedAt: '2026-09-08T12:00:01Z' };
+      seed.resolve(Response.json(newerSeed));
+      await vi.waitFor(() => expect(live.getCurrent().updatedAt).toBe(newerSeed.updatedAt));
+      expect(received).toHaveLength(2);
+
+      sources[0].dispatchEvent(
+        new MessageEvent('meta', {
+          data: JSON.stringify({
+            ...newerSeed,
+            twitch: { ...snapshot.twitch, title: 'New title' },
+          }),
+        })
+      );
+      expect(received).toHaveLength(2);
+
+      sources[0].dispatchEvent(
+        new MessageEvent('meta', {
+          data: JSON.stringify({ ...newerSeed, youtube: { live: true, videoId: 'second-video' } }),
+        })
+      );
+      expect(received).toHaveLength(3);
+      expect(received[2].youtube.videoId).toBe('second-video');
+      unsubscribe();
+    });
   });
 
   it('delivers the current snapshot to a new subscriber synchronously', () => {

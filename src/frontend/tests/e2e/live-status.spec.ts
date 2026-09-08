@@ -498,6 +498,16 @@ test.describe('live status', () => {
 
     await page.addInitScript(() => {
       const pipDocument = document.implementation.createHTMLDocument('Aspire live stream');
+      let iframeCreations = 0;
+      pipDocument.createElement = new Proxy(pipDocument.createElement, {
+        apply(target, thisArg, args) {
+          if (args[0] === 'iframe') iframeCreations++;
+          return Reflect.apply(target, thisArg, args);
+        },
+      });
+      Object.defineProperty(window, '__aspirePipIframeCreations', {
+        get: () => iframeCreations,
+      });
       const fakePipWindow = {
         document: pipDocument,
         closed: false,
@@ -614,6 +624,38 @@ test.describe('live status', () => {
         })
       )
       .toBe(iframeSrcBeforeNavigation);
+
+    await liveBtnAfterNavigation.click();
+    await page
+      .getByRole('dialog', { name: 'Choose how to watch' })
+      .getByRole('button', { name: /Open Twitch Picture-in-Picture/ })
+      .click();
+    expect(
+      await page.evaluate(
+        () =>
+          (window as Window & { __aspirePipIframeCreations?: number }).__aspirePipIframeCreations
+      )
+    ).toBe(1);
+
+    await liveBtnAfterNavigation.click();
+    const dialogAfterNavigation = page.getByRole('dialog', { name: 'Choose how to watch' });
+    await expect(dialogAfterNavigation).toBeVisible();
+    const pickerLookups = await page.evaluate(() => {
+      const getElementById = document.getElementById;
+      let lookups = 0;
+      document.getElementById = function (id) {
+        if (id === 'aspire-live-source-menu') lookups++;
+        return getElementById.call(this, id);
+      };
+      try {
+        document.body.click();
+        return lookups;
+      } finally {
+        document.getElementById = getElementById;
+      }
+    });
+    expect(pickerLookups).toBe(2);
+    await expect(dialogAfterNavigation).toBeHidden();
   });
 
   test('live header offers a provider choice when both streams are live', async ({ page }) => {
@@ -767,6 +809,20 @@ test.describe('live status', () => {
     );
 
     await page.route(streamEndpoint, (route) => fulfillSseState(route, idleSnapshot));
+    await page.addInitScript(() => {
+      let srcWrites = 0;
+      const src = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'src')!;
+      Object.defineProperty(HTMLIFrameElement.prototype, 'src', {
+        ...src,
+        set(value: string) {
+          if (this.closest('.live-embed-wrapper')) srcWrites++;
+          src.set!.call(this, value);
+        },
+      });
+      Object.defineProperty(window, '__aspireLiveEmbedSrcWrites', {
+        get: () => srcWrites,
+      });
+    });
 
     await page.goto('/community/videos/');
     await dismissCookieConsentIfVisible(page);
@@ -782,6 +838,13 @@ test.describe('live status', () => {
     await expect(twitchFrame).not.toHaveAttribute('title');
     await expect(youtubeFrame).toHaveAttribute('aria-label', 'Aspire on YouTube');
     await expect(twitchFrame).toHaveAttribute('aria-label', 'Aspire on Twitch');
+    await expect(page.locator('#aspire-live-tabs')).toHaveAttribute('data-bound', '1');
+    expect(
+      await page.evaluate(
+        () =>
+          (window as Window & { __aspireLiveEmbedSrcWrites?: number }).__aspireLiveEmbedSrcWrites
+      )
+    ).toBe(0);
   });
 
   test('videos page refreshes and mutes the active live embed for autoplay', async ({ page }) => {
@@ -809,5 +872,37 @@ test.describe('live status', () => {
     await expect(youtubeFrame).toHaveAttribute('src', /[?&]autoplay=1(?:&|$)/);
     await expect(youtubeFrame).toHaveAttribute('src', /[?&]mute=1(?:&|$)/);
     await expect(page.locator('[role="tab"][aria-selected="true"]')).toContainText('YouTube');
+  });
+
+  test('videos page only autoplays the selected live provider', async ({ page }) => {
+    const liveSnapshot: LiveSnapshot = {
+      isLive: true,
+      primarySource: 'twitch',
+      twitch: { live: true, channel: 'aspiredotdev' },
+      youtube: { live: true, videoId: 'video-123' },
+      updatedAt: new Date().toISOString(),
+    };
+    await page.route(snapshotEndpoint, (route) => route.fulfill({ json: liveSnapshot }));
+    await page.route(streamEndpoint, (route) => fulfillSseState(route, liveSnapshot));
+    await page.route(/^https:\/\/(?:player\.twitch\.tv|www\.youtube-nocookie\.com)\//, (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Test player</title>' })
+    );
+
+    await page.goto('/community/videos/');
+    await dismissCookieConsentIfVisible(page);
+
+    const youtubeFrame = page.locator('.live-embed-wrapper[data-source="youtube"] iframe');
+    const twitchFrame = page.locator('.live-embed-wrapper[data-source="twitch"] iframe');
+    await expect(twitchFrame).toHaveAttribute('src', /[?&]autoplay=true(?:&|$)/);
+    await expect(youtubeFrame).not.toHaveAttribute('src', /[?&]autoplay=1(?:&|$)/);
+
+    const youtubeTab = page.getByRole('tab', { name: 'YouTube', exact: true });
+    await youtubeTab.click();
+    await expect(youtubeFrame).toHaveAttribute('src', /[?&]autoplay=1(?:&|$)/);
+    await expect(twitchFrame).toHaveAttribute('src', /[?&]autoplay=false(?:&|$)/);
+
+    await youtubeTab.press('ArrowRight');
+    await expect(twitchFrame).toHaveAttribute('src', /[?&]autoplay=true(?:&|$)/);
+    await expect(youtubeFrame).toHaveAttribute('src', /[?&]autoplay=0(?:&|$)/);
   });
 });

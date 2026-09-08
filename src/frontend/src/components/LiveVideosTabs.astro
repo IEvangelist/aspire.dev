@@ -42,6 +42,8 @@ const { youtubeChannelId, twitchChannel } = Astro.props;
   const PAGE_SELECTOR = '#aspire-live-tabs';
   let userSticky = false;
   let unsubscribe: (() => void) | undefined;
+  let tabObserver: MutationObserver | undefined;
+  let currentSnapshot: LiveSnapshot | undefined;
 
   function findTabRoot(): HTMLElement | null {
     return document.querySelector<HTMLElement>(PAGE_SELECTOR);
@@ -53,7 +55,7 @@ const { youtubeChannelId, twitchChannel } = Astro.props;
     const tabBtn = Array.from(root.querySelectorAll<HTMLElement>('[role="tab"]')).find(
       (b) => b.textContent?.trim() === label
     );
-    tabBtn?.click();
+    if (tabBtn?.getAttribute('aria-selected') !== 'true') tabBtn?.click();
   }
 
   function refreshEmbed(wrapper: HTMLElement, source: 'youtube' | 'twitch', live: boolean): void {
@@ -80,24 +82,33 @@ const { youtubeChannelId, twitchChannel } = Astro.props;
     if (!root) return;
     const wrapper = root.querySelector<HTMLElement>(`.live-embed-wrapper[data-source="${source}"]`);
     if (!wrapper) return;
-    const nextLive = live ? 'true' : 'false';
-    const nextStreamId = streamId ?? '';
-    if (wrapper.dataset.live === nextLive && wrapper.dataset.streamId === nextStreamId) return;
-
+    const autoplay = live && wrapper.closest<HTMLElement>('[role="tabpanel"]')?.hidden === false;
+    const nextStreamId = live ? (streamId ?? '') : '';
+    const playbackChanged = (wrapper.dataset.autoplay === 'true') !== autoplay;
+    const streamChanged = (wrapper.dataset.streamId ?? '') !== nextStreamId;
     wrapper.dataset.live = live ? 'true' : 'false';
     wrapper.dataset.streamId = nextStreamId;
-    refreshEmbed(wrapper, source, live);
+    wrapper.dataset.autoplay = autoplay ? 'true' : 'false';
+    if (playbackChanged || (autoplay && streamChanged)) {
+      refreshEmbed(wrapper, source, autoplay);
+    }
+  }
+
+  function updateEmbeds(snap: LiveSnapshot): void {
+    setEmbedLive('youtube', snap.youtube.live, snap.youtube.videoId);
+    setEmbedLive('twitch', snap.twitch.live, snap.twitch.channel);
   }
 
   function applySnapshot(snap: LiveSnapshot): void {
-    setEmbedLive('youtube', snap.youtube.live, snap.youtube.videoId);
-    setEmbedLive('twitch', snap.twitch.live, snap.twitch.channel);
+    currentSnapshot = snap;
     const root = findTabRoot();
     if (root) root.dataset.activeSource = snap.primarySource ?? 'none';
 
-    if (userSticky) return;
-    if (snap.primarySource === 'twitch') activateTab('Twitch');
-    else if (snap.primarySource === 'youtube') activateTab('YouTube');
+    if (!userSticky) {
+      if (snap.primarySource === 'twitch') activateTab('Twitch');
+      else if (snap.primarySource === 'youtube') activateTab('YouTube');
+    }
+    updateEmbeds(snap);
   }
 
   function init(): void {
@@ -115,12 +126,24 @@ const { youtubeChannelId, twitchChannel } = Astro.props;
         userSticky = true;
       });
     });
+    // Tab changes can come from clicks, keyboard controls, or restored preferences.
+    tabObserver = new MutationObserver(() => {
+      if (currentSnapshot) updateEmbeds(currentSnapshot);
+    });
+    tabObserver.observe(root, {
+      attributes: true,
+      attributeFilter: ['hidden'],
+      subtree: true,
+    });
     unsubscribe = subscribe(applySnapshot);
   }
 
   function cleanup(): void {
     unsubscribe?.();
     unsubscribe = undefined;
+    tabObserver?.disconnect();
+    tabObserver = undefined;
+    currentSnapshot = undefined;
     userSticky = false;
   }
 

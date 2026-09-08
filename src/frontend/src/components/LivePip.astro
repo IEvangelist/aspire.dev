@@ -157,6 +157,7 @@ import LiveSvg from '@assets/icons/live.svg';
 
   let current = getCurrent();
   let sourcePickerAnchor: HTMLElement | null = null;
+  let pickerListeners: AbortController | undefined;
 
   function getState(): LivePipState {
     return (window.__aspireLivePipState ??= {
@@ -264,36 +265,35 @@ import LiveSvg from '@assets/icons/live.svg';
     return `https://www.twitch.tv/${encodeURIComponent(snapshot.twitch.channel ?? DEFAULT_TWITCH_CHANNEL)}`;
   }
 
-  function buildEmbed(
-    doc: Document,
+  function getEmbed(
     snapshot: LiveSnapshot,
     source: LiveSource | null
-  ): { key: string; iframe: HTMLIFrameElement | null; source: LiveSource | null } {
+  ): { key: string; url: string; allow: string; label: string; source: LiveSource } | null {
     if (source === 'twitch' && snapshot.twitch.live) {
       const channel = snapshot.twitch.channel ?? DEFAULT_TWITCH_CHANNEL;
-      const iframe = doc.createElement('iframe');
-      iframe.src = `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentHost())}&autoplay=true&muted=true`;
-      iframe.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
-      iframe.setAttribute('aria-label', `Twitch live stream from ${channel}`);
-      return { key: `twitch:${channel}`, iframe, source };
-    }
-
-    if (source === 'youtube' && snapshot.youtube.live) {
-      const id = snapshot.youtube.videoId;
-      const iframe = doc.createElement('iframe');
-      iframe.src = id
-        ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&mute=1`
-        : `https://www.youtube-nocookie.com/embed/live_stream?channel=${encodeURIComponent(DEFAULT_YOUTUBE_CHANNEL_ID)}&autoplay=1&mute=1`;
-      iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
-      iframe.setAttribute('aria-label', 'YouTube live stream');
       return {
-        key: id ? `youtube:${id}` : `youtube-channel:${DEFAULT_YOUTUBE_CHANNEL_ID}`,
-        iframe,
+        key: `twitch:${channel}`,
+        url: `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentHost())}&autoplay=true&muted=true`,
+        allow: 'autoplay; encrypted-media; fullscreen; picture-in-picture',
+        label: `Twitch live stream from ${channel}`,
         source,
       };
     }
 
-    return { key: '', iframe: null, source: null };
+    if (source === 'youtube' && snapshot.youtube.live) {
+      const id = snapshot.youtube.videoId;
+      return {
+        key: id ? `youtube:${id}` : `youtube-channel:${DEFAULT_YOUTUBE_CHANNEL_ID}`,
+        url: id
+          ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&mute=1`
+          : `https://www.youtube-nocookie.com/embed/live_stream?channel=${encodeURIComponent(DEFAULT_YOUTUBE_CHANNEL_ID)}&autoplay=1&mute=1`,
+        allow: 'autoplay; encrypted-media; picture-in-picture',
+        label: 'YouTube live stream',
+        source,
+      };
+    }
+
+    return null;
   }
 
   function renderPip(snapshot: LiveSnapshot): void {
@@ -309,16 +309,20 @@ import LiveSvg from '@assets/icons/live.svg';
       return;
     }
 
-    const doc = pipWindow.document;
-    const { key, iframe, source } = buildEmbed(doc, snapshot, chooseSource(snapshot));
-    if (!iframe || !key) return;
+    const embed = getEmbed(snapshot, chooseSource(snapshot));
+    if (!embed) return;
     const state = getState();
-    if (state.activeEmbedKey === key) {
-      state.selectedSource = source;
+    if (state.activeEmbedKey === embed.key) {
+      state.selectedSource = embed.source;
       publishPipState(true);
       return;
     }
 
+    const doc = pipWindow.document;
+    const iframe = doc.createElement('iframe');
+    iframe.src = embed.url;
+    iframe.allow = embed.allow;
+    iframe.setAttribute('aria-label', embed.label);
     doc.title = 'Aspire live stream';
     doc.head.replaceChildren();
 
@@ -341,8 +345,8 @@ import LiveSvg from '@assets/icons/live.svg';
     `;
     doc.head.append(style);
     doc.body.replaceChildren(iframe);
-    state.activeEmbedKey = key;
-    state.selectedSource = source;
+    state.activeEmbedKey = embed.key;
+    state.selectedSource = embed.source;
     publishPipState(true);
   }
 
@@ -448,17 +452,12 @@ import LiveSvg from '@assets/icons/live.svg';
     const preferredSource = sourceIsLive(current, current.primarySource)
       ? current.primarySource
       : (liveSources[0] ?? null);
-    const sourceOrder = [preferredSource, ...getLiveSources(current), 'youtube', 'twitch'].filter(
-      (source, index, sources): source is LiveSource => {
-        return source !== null && sources.indexOf(source) === index;
-      }
+    const preferredLink = sourceLinks.find(
+      (link) => link.dataset.liveSourceLink === preferredSource
     );
-    sourceOrder.forEach((source) => {
-      const link = sourceLinks.find((candidate) => candidate.dataset.liveSourceLink === source);
-      if (link) {
-        externalGroup?.append(link);
-      }
-    });
+    if (preferredLink && preferredLink !== sourceLinks[0]) {
+      externalGroup?.insertBefore(preferredLink, sourceLinks[0]);
+    }
 
     const dismissButton = picker.querySelector<HTMLButtonElement>('[data-live-action="dismiss"]');
     if (dismissButton) {
@@ -542,72 +541,94 @@ import LiveSvg from '@assets/icons/live.svg';
   function bindSourcePicker(): void {
     const picker = getSourcePicker();
     if (!picker || picker.dataset.bound === 'true') return;
+    pickerListeners?.abort();
+    pickerListeners = new AbortController();
+    const { signal } = pickerListeners;
     picker.dataset.bound = 'true';
-    picker.addEventListener('click', (evt) => {
-      const target = evt.target;
-      if (!(target instanceof Element)) return;
+    picker.addEventListener(
+      'click',
+      (evt) => {
+        const target = evt.target;
+        if (!(target instanceof Element)) return;
 
-      const pipButton = target.closest<HTMLButtonElement>('[data-live-pip-choice]');
-      if (pipButton && picker.contains(pipButton)) {
-        const source = pipButton.dataset.livePipChoice as LiveSource | undefined;
-        if (!source) return;
-        setPipStatus();
-        pipButton.disabled = true;
-        void openNativePip(source)
-          .then((opened) => {
-            if (opened) {
-              closeSourcePicker();
-              return;
-            }
+        const pipButton = target.closest<HTMLButtonElement>('[data-live-pip-choice]');
+        if (pipButton && picker.contains(pipButton)) {
+          const source = pipButton.dataset.livePipChoice as LiveSource | undefined;
+          if (!source) return;
+          setPipStatus();
+          pipButton.disabled = true;
+          void openNativePip(source)
+            .then((opened) => {
+              if (opened) {
+                closeSourcePicker();
+                return;
+              }
 
-            setPipStatus('Picture-in-picture is not available. Choose another watch option.');
-          })
-          .catch((err) => {
-            console.warn('[live-status] Document Picture-in-Picture failed', err);
-            setPipStatus('Picture-in-picture is not available. Choose another watch option.');
-          })
-          .finally(() => {
-            syncSourcePickerControls();
-          });
-        return;
-      }
+              setPipStatus('Picture-in-picture is not available. Choose another watch option.');
+            })
+            .catch((err) => {
+              console.warn('[live-status] Document Picture-in-Picture failed', err);
+              setPipStatus('Picture-in-picture is not available. Choose another watch option.');
+            })
+            .finally(() => {
+              syncSourcePickerControls();
+            });
+          return;
+        }
 
-      const closeButton = target.closest<HTMLButtonElement>('[data-live-action="close"]');
-      if (closeButton && picker.contains(closeButton)) {
-        closeSourcePicker(true);
-        return;
-      }
+        const closeButton = target.closest<HTMLButtonElement>('[data-live-action="close"]');
+        if (closeButton && picker.contains(closeButton)) {
+          closeSourcePicker(true);
+          return;
+        }
 
-      const dismissButton = target.closest<HTMLButtonElement>('[data-live-action="dismiss"]');
-      if (dismissButton && picker.contains(dismissButton)) {
-        dismissLiveNotification(current);
-        syncSourcePickerControls();
-        closeSourcePicker(true);
-        return;
-      }
+        const dismissButton = target.closest<HTMLButtonElement>('[data-live-action="dismiss"]');
+        if (dismissButton && picker.contains(dismissButton)) {
+          dismissLiveNotification(current);
+          syncSourcePickerControls();
+          closeSourcePicker(true);
+          return;
+        }
 
-      if (target.closest<HTMLAnchorElement>('a')) {
+        if (target.closest<HTMLAnchorElement>('a')) {
+          closeSourcePicker();
+        }
+      },
+      { signal }
+    );
+    document.addEventListener(
+      'click',
+      (evt) => {
+        if (picker.hidden) return;
+        const target = evt.target;
+        if (!(target instanceof Node)) return;
+        if (picker.contains(target) || (target instanceof Element && target.closest('.live-btn')))
+          return;
         closeSourcePicker();
-      }
-    });
-    document.addEventListener('click', (evt) => {
-      const target = evt.target;
-      if (!(target instanceof Node)) return;
-      if (picker.contains(target) || (target instanceof Element && target.closest('.live-btn')))
-        return;
-      closeSourcePicker();
-    });
-    document.addEventListener('keydown', (evt) => {
-      if (evt.key === 'Escape' && !picker.hidden) {
-        closeSourcePicker(true);
-      }
-    });
-    window.addEventListener('resize', () => {
-      const expandedButton = document.querySelector<HTMLElement>('.live-btn[aria-expanded="true"]');
-      if (!picker.hidden && expandedButton) {
-        positionSourcePicker(expandedButton, picker);
-      }
-    });
+      },
+      { signal }
+    );
+    document.addEventListener(
+      'keydown',
+      (evt) => {
+        if (evt.key === 'Escape' && !picker.hidden) {
+          closeSourcePicker(true);
+        }
+      },
+      { signal }
+    );
+    window.addEventListener(
+      'resize',
+      () => {
+        const expandedButton = document.querySelector<HTMLElement>(
+          '.live-btn[aria-expanded="true"]'
+        );
+        if (!picker.hidden && expandedButton) {
+          positionSourcePicker(expandedButton, picker);
+        }
+      },
+      { signal }
+    );
   }
 
   function syncHeaderMenuState(): void {
@@ -664,6 +685,11 @@ import LiveSvg from '@assets/icons/live.svg';
       init();
     }
     document.addEventListener('astro:after-swap', init);
+    document.addEventListener('astro:before-swap', () => {
+      pickerListeners?.abort();
+      pickerListeners = undefined;
+      sourcePickerAnchor = null;
+    });
   }
 </script>
 

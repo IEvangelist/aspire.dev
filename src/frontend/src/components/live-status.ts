@@ -57,8 +57,8 @@ function snapshotsEqual(a: LiveSnapshot, b: LiveSnapshot): boolean {
   );
 }
 
-function applySnapshot(next: LiveSnapshot, force = false): void {
-  if (!force && snapshotsEqual(current, next)) {
+function applySnapshot(next: LiveSnapshot): void {
+  if (snapshotsEqual(current, next)) {
     current = next;
     return;
   }
@@ -123,7 +123,7 @@ async function seed(): Promise<void> {
       // the seed if it isn't older than what we've already rendered, so a slow
       // snapshot response can't clobber fresher live state pushed over SSE.
       if (Date.parse(json.updatedAt) >= Date.parse(current.updatedAt)) {
-        applySnapshot(json, true);
+        applySnapshot(json);
       }
     }
   } catch {
@@ -167,10 +167,10 @@ function connect(): void {
   source.addEventListener('meta', (evt) => {
     try {
       const data = JSON.parse((evt as MessageEvent<string>).data) as LiveSnapshot;
-      // meta updates do not retrigger animations: only update buffered state.
-      current = data;
-    } catch {
-      /* ignore */
+      // Ignore title/timestamp-only changes, but deliver a changed stream ID.
+      applySnapshot(data);
+    } catch (err) {
+      console.warn('[live-status] failed to parse meta event', err);
     }
   });
 

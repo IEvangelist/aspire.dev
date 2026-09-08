@@ -24,7 +24,8 @@ if (builder.ExecutionContext.IsRunMode)
 }
 else
 {
-    staticHostWebsite.WithProductionLiveStatus(builder);
+    var siteConfig = builder.AddAzureKeyVault("siteconfig");
+    staticHostWebsite.WithProductionLiveStatus(siteConfig);
 }
 
 builder.Build().Run();

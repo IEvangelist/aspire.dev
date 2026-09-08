@@ -1,4 +1,5 @@
-using System.Collections.Immutable;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Channels;
 using Microsoft.Extensions.Options;
 
@@ -15,6 +16,16 @@ public sealed class LiveStatusUpdate
 
     /// <summary>Set to non-null to overwrite the YouTube sub-status.</summary>
     public YouTubeStatus? YouTube { get; set; }
+}
+
+/// <summary>A snapshot and its serialized SSE frame, shared by all subscribers.</summary>
+public sealed class LiveStatusEvent(LiveStatus snapshot)
+{
+    /// <summary>The immutable live-status snapshot.</summary>
+    public LiveStatus Snapshot { get; } = snapshot;
+
+    internal ReadOnlyMemory<byte> Frame { get; } = Encoding.UTF8.GetBytes(
+        $"event: state\ndata: {JsonSerializer.Serialize(snapshot, LiveStatusJsonContext.Default.LiveStatus)}\n\n");
 }
 
 /// <summary>
@@ -41,7 +52,7 @@ public sealed class LiveStatusUpdate
 /// near-simultaneous Twitch + YouTube going-live race produces exactly
 /// one SSE update.
 /// </para>
-/// <para>Subscriber list is copy-on-write (lock-free reads).</para>
+/// <para>Subscriber registration and fan-out share a lock; snapshots remain lock-free to read.</para>
 /// </remarks>
 /// <remarks>Creates the broadcaster.</remarks>
 public sealed class LiveStatusBroadcaster(
@@ -53,22 +64,22 @@ public sealed class LiveStatusBroadcaster(
     private readonly TimeSpan _coalesceWindow = TimeSpan.FromMilliseconds(options.Value.CoalesceWindowMs);
 
     private readonly Lock _gate = new();
-    private LiveStatus _current = LiveStatus.Idle;
+    private LiveStatusEvent _current = new(LiveStatus.Idle);
     private LiveStatus? _pending;
     private ITimer? _flushTimer;
-    private ImmutableArray<ChannelWriter<LiveStatus>> _subscribers = [];
+    private readonly HashSet<ChannelWriter<LiveStatusEvent>> _subscribers = [];
 
     /// <summary>Returns the current snapshot. Lock-free.</summary>
-    public LiveStatus Current => Volatile.Read(ref _current);
+    public LiveStatus Current => Volatile.Read(ref _current).Snapshot;
 
     /// <summary>
     /// Subscribe to live-status changes. The returned <see cref="ChannelReader{T}"/>
     /// receives the current snapshot immediately followed by every subsequent
     /// change. Dispose the returned token to unsubscribe.
     /// </summary>
-    public (ChannelReader<LiveStatus> Reader, IDisposable Unsubscribe) Subscribe()
+    public (ChannelReader<LiveStatusEvent> Reader, IDisposable Unsubscribe) Subscribe()
     {
-        var channel = Channel.CreateBounded<LiveStatus>(new BoundedChannelOptions(8)
+        var channel = Channel.CreateBounded<LiveStatusEvent>(new BoundedChannelOptions(8)
         {
             FullMode = BoundedChannelFullMode.DropOldest,
             SingleReader = true,
@@ -82,7 +93,7 @@ public sealed class LiveStatusBroadcaster(
         lock (_gate)
         {
             channel.Writer.TryWrite(_current);
-            _subscribers = _subscribers.Add(channel.Writer);
+            _subscribers.Add(channel.Writer);
         }
 
         return (channel.Reader, new Unsubscriber(this, channel.Writer));
@@ -96,9 +107,13 @@ public sealed class LiveStatusBroadcaster(
     {
         lock (_gate)
         {
-            var basis = _pending ?? _current;
+            var basis = _pending ?? _current.Snapshot;
             var twitch = update.Twitch ?? basis.Twitch;
             var youtube = update.YouTube ?? basis.YouTube;
+            if (twitch == basis.Twitch && youtube == basis.YouTube)
+            {
+                return;
+            }
 
             // Sticky primary: keep the previous primary if it's still live;
             // otherwise pick whichever source is live. Resolve against the pending
@@ -117,15 +132,6 @@ public sealed class LiveStatusBroadcaster(
                 YouTube: youtube,
                 LiveSessionId: liveSessionId,
                 UpdatedAt: now);
-
-            // Ignore UpdatedAt when deciding whether anything substantive changed;
-            // otherwise the ever-advancing timestamp makes every reconcile look new
-            // and forces a redundant broadcast. When nothing else changed, keep the
-            // previous snapshot (and its UpdatedAt) untouched.
-            if (_pending is null && (next with { UpdatedAt = _current.UpdatedAt }) == _current)
-            {
-                return;
-            }
 
             _pending = next;
 
@@ -171,31 +177,31 @@ public sealed class LiveStatusBroadcaster(
         if (_pending is not { } next) return;
         // Excluding UpdatedAt: if an update and a later revert coalesce into the
         // same substantive state as _current, don't broadcast a timestamp-only bump.
-        if ((next with { UpdatedAt = _current.UpdatedAt }) == _current) { _pending = null; return; }
+        if ((next with { UpdatedAt = _current.Snapshot.UpdatedAt }) == _current.Snapshot) { _pending = null; return; }
 
-        Volatile.Write(ref _current, next);
+        var published = new LiveStatusEvent(next);
+        Volatile.Write(ref _current, published);
         _pending = null;
 
         logger.LogInformation(
             "Live status updated: isLive={IsLive} primary={Primary} twitch={Twitch} youtube={YouTube}",
             next.IsLive, next.PrimarySource, next.Twitch.Live, next.YouTube.Live);
 
-        var subs = _subscribers;
-        foreach (var writer in subs)
+        foreach (var writer in _subscribers)
         {
             // BoundedChannel + DropOldest means TryWrite will never fail.
-            writer.TryWrite(next);
+            writer.TryWrite(published);
         }
     }
 
     /// <summary>Forces an immediate flush of any pending coalesced update. Test hook.</summary>
     internal void FlushNow() => Flush();
 
-    private void RemoveSubscriber(ChannelWriter<LiveStatus> writer)
+    private void RemoveSubscriber(ChannelWriter<LiveStatusEvent> writer)
     {
         lock (_gate)
         {
-            _subscribers = _subscribers.Remove(writer);
+            _subscribers.Remove(writer);
         }
 
         try { writer.TryComplete(); } catch { /* best-effort */ }
@@ -207,7 +213,7 @@ public sealed class LiveStatusBroadcaster(
         _flushTimer?.Dispose();
     }
 
-    private sealed class Unsubscriber(LiveStatusBroadcaster owner, ChannelWriter<LiveStatus> writer) : IDisposable
+    private sealed class Unsubscriber(LiveStatusBroadcaster owner, ChannelWriter<LiveStatusEvent> writer) : IDisposable
     {
         private int _disposed;
 

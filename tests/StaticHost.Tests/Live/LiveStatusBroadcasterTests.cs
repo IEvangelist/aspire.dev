@@ -96,7 +96,7 @@ public sealed class LiveStatusBroadcasterTests
         var (reader, sub) = b.Subscribe();
 
         var seeded = await reader.ReadAsync();
-        Assert.False(seeded.IsLive);
+        Assert.False(seeded.Snapshot.IsLive);
 
         b.Update(new LiveStatusUpdate { Twitch = new TwitchStatus(true, "x", null) });
         b.Update(new LiveStatusUpdate { YouTube = new YouTubeStatus(true, "v") });
@@ -107,10 +107,10 @@ public sealed class LiveStatusBroadcasterTests
         time.Advance(TimeSpan.FromMilliseconds(800));
 
         var combined = await reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));
-        Assert.True(combined.IsLive);
-        Assert.True(combined.Twitch.Live);
-        Assert.True(combined.YouTube.Live);
-        Assert.False(string.IsNullOrEmpty(combined.LiveSessionId));
+        Assert.True(combined.Snapshot.IsLive);
+        Assert.True(combined.Snapshot.Twitch.Live);
+        Assert.True(combined.Snapshot.YouTube.Live);
+        Assert.False(string.IsNullOrEmpty(combined.Snapshot.LiveSessionId));
         Assert.False(reader.TryRead(out _));
 
         sub.Dispose();
@@ -135,7 +135,7 @@ public sealed class LiveStatusBroadcasterTests
 
         var (reader, sub) = b.Subscribe();
         var first = await reader.ReadAsync();
-        Assert.True(first.IsLive);
+        Assert.True(first.Snapshot.IsLive);
         sub.Dispose();
     }
 
@@ -169,7 +169,7 @@ public sealed class LiveStatusBroadcasterTests
 
         b.Update(new LiveStatusUpdate { Twitch = new TwitchStatus(true, "x", null) });
         var first = await reader.ReadAsync();
-        Assert.True(first.IsLive);
+        Assert.True(first.Snapshot.IsLive);
 
         time.Advance(TimeSpan.FromSeconds(5));
         b.Update(new LiveStatusUpdate { Twitch = new TwitchStatus(true, "x", null) });
@@ -192,5 +192,58 @@ public sealed class LiveStatusBroadcasterTests
         time.Advance(TimeSpan.FromMilliseconds(50));
 
         await Assert.ThrowsAnyAsync<ChannelClosedException>(async () => await reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(1)));
+    }
+
+    [Fact]
+    public async Task Subscribers_ShareOneSerializedFramePerPublishedSnapshot()
+    {
+        using var broadcaster = LiveTestHelpers.CreateBroadcaster();
+        var (first, firstSubscription) = broadcaster.Subscribe();
+        var (second, secondSubscription) = broadcaster.Subscribe();
+        using var firstLease = firstSubscription;
+        using var secondLease = secondSubscription;
+        var idle = await first.ReadAsync();
+        Assert.Same(idle, await second.ReadAsync());
+
+        broadcaster.Update(new LiveStatusUpdate { Twitch = new TwitchStatus(true, "aspiredotdev", "Live") });
+        var update = await first.ReadAsync();
+        Assert.Same(update, await second.ReadAsync());
+        Assert.NotSame(idle, update);
+        var expected = $"event: state\ndata: {JsonSerializer.Serialize(broadcaster.Current, LiveStatusJsonContext.Default.LiveStatus)}\n\n";
+        Assert.Equal(expected, Encoding.UTF8.GetString(update.Frame.Span));
+
+        var (late, lateSubscription) = broadcaster.Subscribe();
+        using var lateLease = lateSubscription;
+        Assert.Same(update, await late.ReadAsync());
+        broadcaster.Update(new LiveStatusUpdate { Twitch = new TwitchStatus(true, "aspiredotdev", "Live") });
+        Assert.False(first.TryRead(out _));
+        Assert.False(second.TryRead(out _));
+    }
+
+    [Fact]
+    public void SubscriberChurn_DoesNotAllocateCopiesOfTheAudience()
+    {
+        using var broadcaster = LiveTestHelpers.CreateBroadcaster();
+        var leases = new List<IDisposable> { broadcaster.Subscribe().Unsubscribe };
+        var smallAudienceBytes = MeasureChurn(broadcaster);
+        for (var i = 0; i < 512; i++)
+        {
+            leases.Add(broadcaster.Subscribe().Unsubscribe);
+        }
+        var largeAudienceBytes = MeasureChurn(broadcaster);
+        Assert.True(largeAudienceBytes <= smallAudienceBytes + 16_384,
+            $"100 connections allocated {smallAudienceBytes} bytes with one viewer and {largeAudienceBytes} bytes with 513 viewers.");
+        foreach (var lease in leases) lease.Dispose();
+    }
+
+    private static long MeasureChurn(LiveStatusBroadcaster broadcaster)
+    {
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 100; i++)
+        {
+            var (_, subscription) = broadcaster.Subscribe();
+            subscription.Dispose();
+        }
+        return GC.GetAllocatedBytesForCurrentThread() - before;
     }
 }

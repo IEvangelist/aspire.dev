@@ -1,97 +1,33 @@
 using System.Security.Cryptography;
 using System.Text;
 
+using Aspire.Hosting.Azure;
 using Azure.Provisioning.KeyVault;
 
 internal static class LiveExtensions
 {
     public static IResourceBuilder<ProjectResource> WithProductionLiveStatus(
         this IResourceBuilder<ProjectResource> staticHostWebsite,
-        IDistributedApplicationBuilder builder)
+        IResourceBuilder<AzureKeyVaultResource> siteConfig)
     {
-        var liveConfig = builder.AddAzureKeyVault("liveconfig");
-
-        var publicBaseUrl = liveConfig.AddSecret(
-            "live-public-base-url-secret",
-            "live-public-base-url",
-            builder.AddParameter("live-public-base-url", "https://aspire.dev", publishValueAsDefault: true));
-        var coalesceWindow = liveConfig.AddSecret(
-            "live-coalesce-window-ms-secret",
-            "live-coalesce-window-ms",
-            builder.AddParameter("live-coalesce-window-ms", "750", publishValueAsDefault: true));
-
-        var twitchClientId = liveConfig.AddSecret(
-            "live-twitch-client-id-secret",
-            "live-twitch-client-id",
-            builder.AddParameter("live-twitch-client-id", secret: true));
-        var twitchClientSecret = liveConfig.AddSecret(
-            "live-twitch-client-secret-secret",
-            "live-twitch-client-secret",
-            builder.AddParameter("live-twitch-client-secret", secret: true));
-        var twitchWebhookSecret = liveConfig.AddSecret(
-            "live-twitch-webhook-secret-secret",
-            "live-twitch-webhook-secret",
-            builder.AddParameter("live-twitch-webhook-secret", secret: true));
-        var twitchChannelLogin = liveConfig.AddSecret(
-            "live-twitch-channel-login-secret",
-            "live-twitch-channel-login",
-            builder.AddParameter("live-twitch-channel-login", "aspiredotdev", publishValueAsDefault: true));
-        var twitchChannelId = liveConfig.AddSecret(
-            "live-twitch-channel-id-secret",
-            "live-twitch-channel-id",
-            builder.AddParameter("live-twitch-channel-id"));
-        var twitchReconcileInterval = liveConfig.AddSecret(
-            "live-twitch-reconcile-interval-seconds-secret",
-            "live-twitch-reconcile-interval-seconds",
-            builder.AddParameter("live-twitch-reconcile-interval-seconds", "1800", publishValueAsDefault: true));
-
-        var youtubeApiKey = liveConfig.AddSecret(
-            "live-youtube-api-key-secret",
-            "live-youtube-api-key",
-            builder.AddParameter("live-youtube-api-key", secret: true));
-        var youtubeWebhookSecret = liveConfig.AddSecret(
-            "live-youtube-webhook-secret-secret",
-            "live-youtube-webhook-secret",
-            builder.AddParameter("live-youtube-webhook-secret", secret: true));
-        var youtubeChannelHandle = liveConfig.AddSecret(
-            "live-youtube-channel-handle-secret",
-            "live-youtube-channel-handle",
-            builder.AddParameter("live-youtube-channel-handle", "@aspiredotdev", publishValueAsDefault: true));
-        var youtubeChannelId = liveConfig.AddSecret(
-            "live-youtube-channel-id-secret",
-            "live-youtube-channel-id",
-            builder.AddParameter("live-youtube-channel-id"));
-        var youtubePollingInterval = liveConfig.AddSecret(
-            "live-youtube-polling-interval-seconds-secret",
-            "live-youtube-polling-interval-seconds",
-            builder.AddParameter("live-youtube-polling-interval-seconds", "120", publishValueAsDefault: true));
-        var youtubeDiscoveryPollingInterval = liveConfig.AddSecret(
-            "live-youtube-discovery-polling-interval-seconds-secret",
-            "live-youtube-discovery-polling-interval-seconds",
-            builder.AddParameter("live-youtube-discovery-polling-interval-seconds", "1800", publishValueAsDefault: true));
-        var youtubeOfflineConfirmationCount = liveConfig.AddSecret(
-            "live-youtube-offline-confirmation-count-secret",
-            "live-youtube-offline-confirmation-count",
-            builder.AddParameter("live-youtube-offline-confirmation-count", "2", publishValueAsDefault: true));
-
         return staticHostWebsite
-            .WithRoleAssignments(liveConfig, KeyVaultBuiltInRole.KeyVaultSecretsUser)
-            .WithReference(liveConfig)
-            .WithEnvironment("Live__PublicBaseUrl", publicBaseUrl.Resource)
-            .WithEnvironment("Live__CoalesceWindowMs", coalesceWindow.Resource)
-            .WithEnvironment("Live__Twitch__ClientId", twitchClientId.Resource)
-            .WithEnvironment("Live__Twitch__ClientSecret", twitchClientSecret.Resource)
-            .WithEnvironment("Live__Twitch__WebhookSecret", twitchWebhookSecret.Resource)
-            .WithEnvironment("Live__Twitch__ChannelLogin", twitchChannelLogin.Resource)
-            .WithEnvironment("Live__Twitch__ChannelId", twitchChannelId.Resource)
-            .WithEnvironment("Live__Twitch__ReconcileIntervalSeconds", twitchReconcileInterval.Resource)
-            .WithEnvironment("Live__YouTube__ApiKey", youtubeApiKey.Resource)
-            .WithEnvironment("Live__YouTube__WebhookSecret", youtubeWebhookSecret.Resource)
-            .WithEnvironment("Live__YouTube__ChannelHandle", youtubeChannelHandle.Resource)
-            .WithEnvironment("Live__YouTube__ChannelId", youtubeChannelId.Resource)
-            .WithEnvironment("Live__YouTube__PollingIntervalSeconds", youtubePollingInterval.Resource)
-            .WithEnvironment("Live__YouTube__DiscoveryPollingIntervalSeconds", youtubeDiscoveryPollingInterval.Resource)
-            .WithEnvironment("Live__YouTube__OfflineConfirmationCount", youtubeOfflineConfirmationCount.Resource)
+            .WithRoleAssignments(siteConfig, KeyVaultBuiltInRole.KeyVaultSecretsUser)
+            .WithReference(siteConfig)
+            .WithEnvironment("Live__PublicBaseUrl", siteConfig.GetSecret("live-public-base-url"))
+            .WithEnvironment("Live__CoalesceWindowMs", siteConfig.GetSecret("live-coalesce-window-ms"))
+            .WithEnvironment("Live__Twitch__ClientId", siteConfig.GetSecret("live-twitch-client-id"))
+            .WithEnvironment("Live__Twitch__ClientSecret", siteConfig.GetSecret("live-twitch-client-secret"))
+            .WithEnvironment("Live__Twitch__WebhookSecret", siteConfig.GetSecret("live-twitch-webhook-secret"))
+            .WithEnvironment("Live__Twitch__ChannelLogin", siteConfig.GetSecret("live-twitch-channel-login"))
+            .WithEnvironment("Live__Twitch__ChannelId", siteConfig.GetSecret("live-twitch-channel-id"))
+            .WithEnvironment("Live__Twitch__ReconcileIntervalSeconds", siteConfig.GetSecret("live-twitch-reconcile-interval-seconds"))
+            .WithEnvironment("Live__YouTube__ApiKey", siteConfig.GetSecret("live-youtube-api-key"))
+            .WithEnvironment("Live__YouTube__WebhookSecret", siteConfig.GetSecret("live-youtube-webhook-secret"))
+            .WithEnvironment("Live__YouTube__ChannelHandle", siteConfig.GetSecret("live-youtube-channel-handle"))
+            .WithEnvironment("Live__YouTube__ChannelId", siteConfig.GetSecret("live-youtube-channel-id"))
+            .WithEnvironment("Live__YouTube__PollingIntervalSeconds", siteConfig.GetSecret("live-youtube-polling-interval-seconds"))
+            .WithEnvironment("Live__YouTube__DiscoveryPollingIntervalSeconds", siteConfig.GetSecret("live-youtube-discovery-polling-interval-seconds"))
+            .WithEnvironment("Live__YouTube__OfflineConfirmationCount", siteConfig.GetSecret("live-youtube-offline-confirmation-count"))
             .PublishAsAzureAppServiceWebsite((_, website) =>
             {
                 // Live state and WebSub verification are coordinated in memory.

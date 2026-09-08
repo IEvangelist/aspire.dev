@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -88,7 +87,7 @@ public static class LiveStatusEndpointRouteBuilderExtensions
             statusCode: StatusCodes.Status200OK);
     }
 
-    private static async Task StreamSse(
+    internal static async Task StreamSse(
         HttpContext context,
         LiveStatusBroadcaster broadcaster,
         TimeProvider time,
@@ -106,34 +105,45 @@ public static class LiveStatusEndpointRouteBuilderExtensions
 
         var (reader, unsubscribe) = broadcaster.Subscribe();
         using var _ = unsubscribe;
+        using var pending = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var heartbeat = new PeriodicTimer(TimeSpan.FromSeconds(15), time);
+        var dataReady = reader.WaitToReadAsync(pending.Token).AsTask();
+        var heartbeatReady = heartbeat.WaitForNextTickAsync(pending.Token).AsTask();
 
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                heartbeatCts.CancelAfter(TimeSpan.FromSeconds(15));
-
-                LiveStatus next;
-                try
+                await Task.WhenAny(dataReady, heartbeatReady).ConfigureAwait(false);
+                if (dataReady.IsCompleted)
                 {
-                    next = await reader.ReadAsync(heartbeatCts.Token).ConfigureAwait(false);
+                    if (!await dataReady.ConfigureAwait(false)) break;
+                    while (reader.TryRead(out var next))
+                    {
+                        await context.Response.Body.WriteAsync(next.Frame, cancellationToken).ConfigureAwait(false);
+                    }
+                    await context.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+                    dataReady = reader.WaitToReadAsync(pending.Token).AsTask();
                 }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                else
                 {
-                    // Heartbeat tick.
+                    if (!await heartbeatReady.ConfigureAwait(false)) break;
                     await context.Response.WriteAsync(":hb\n\n", cancellationToken).ConfigureAwait(false);
                     await context.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
-                    continue;
+                    heartbeatReady = heartbeat.WaitForNextTickAsync(pending.Token).AsTask();
                 }
-
-                var json = JsonSerializer.Serialize(next, LiveStatusJsonContext.Default.LiveStatus);
-                await context.Response.WriteAsync(
-                    $"event: state\ndata: {json}\n\n", cancellationToken).ConfigureAwait(false);
-                await context.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
         }
-        catch (OperationCanceledException) { /* client disconnected */ }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { /* client disconnected */ }
+        finally
+        {
+            await pending.CancelAsync().ConfigureAwait(false);
+            try
+            {
+                await Task.WhenAll(dataReady, heartbeatReady).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (pending.IsCancellationRequested) { /* pending waits cancelled */ }
+        }
     }
 
     // --- Twitch EventSub ----------------------------------------------------
