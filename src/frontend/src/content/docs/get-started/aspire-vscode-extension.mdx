@@ -68,7 +68,7 @@ The Command Palette has commands for the most common tasks:
 - **Aspire: Update Aspire CLI** and **Aspire: Install Aspire CLI** let you manage CLI installation. **Install Aspire CLI** shows a package-manager picker (WinGet, Homebrew, npm, .NET tool, or mise, depending on your platform) plus a **Daily build (dev)** option and a link to the full [installation guide](/get-started/install-cli/) for every option, including the install script.
 
 :::note[Outdated CLI warning]
-VS Code shows a warning when it uses an Aspire CLI executable that is outdated within its release channel. This can happen when you run or debug an app, use the Aspire terminal, or run an Aspire: ... command. For example, VS Code might warn when it finds stable CLI 13.4.0 while stable 13.5.2 is available. Choose `Update Aspire CLI` to update the CLI or `Don't Show Again` to suppress warnings.
+VS Code warns when an operation uses an outdated published Aspire CLI. Stable CLIs are compared with stable releases; daily and staging CLIs are compared with prerelease releases. Local, PR, run, or unrecognized builds and cross-channel recommendations don't trigger the warning. The warning identifies the resolved executable path. `Update Aspire CLI` revalidates and updates that path; `Don't Show Again` suppresses warnings for that exact path and version.
 :::
 
 ## Live editor integration
