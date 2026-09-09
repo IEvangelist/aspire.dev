@@ -210,10 +210,8 @@ describe('Aspire terminology normalization', () => {
   });
 
   test('normalizes prose while preserving adjacent code', () => {
-    const input = `Build a ${legacyAspireName} app, then run \`${legacyDotnetAspireName} run\`.`;
-    expect(normalizeAspireTerminology(input)).toBe(
-      'Build an Aspire app, then run `dotnet aspire run`.'
-    );
+    const input = `Build a ${legacyAspireName} app, then run \`aspire run\`.`;
+    expect(normalizeAspireTerminology(input)).toBe('Build an Aspire app, then run `aspire run`.');
   });
 
   test.each([
@@ -361,7 +359,7 @@ describe('sample terminology normalization', () => {
         `# ${legacyAspireName} sample\n\n` +
         `Run the ${legacyAppHostName.toUpperCase()}.\n\n` +
         '```bash\n' +
-        `${legacyDotnetAspireName} run\n` +
+        'aspire run\n' +
         '```\n',
       tags: ['csharp'],
       thumbnail: null,
@@ -379,7 +377,7 @@ describe('sample terminology normalization', () => {
         '# Aspire sample\n\n' +
         'Run the AppHost.\n\n' +
         '```bash\n' +
-        'dotnet aspire run\n' +
+        'aspire run\n' +
         '```\n',
       appHostCode: '// Keep the container running between AppHost sessions.',
     });
