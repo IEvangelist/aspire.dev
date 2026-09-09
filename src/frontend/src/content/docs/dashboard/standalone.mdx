@@ -204,9 +204,19 @@ For more details, see the [`aspire otel logs`](/reference/cli/commands/aspire-ot
 
 The [`aspire agent mcp`](/reference/cli/commands/aspire-agent-mcp/) command starts an MCP (Model Context Protocol) server that AI assistants can connect to. When used with `--dashboard-url`, it runs in dashboard-only mode and exposes telemetry tools (structured logs and traces) to MCP-compatible clients:
 
+Unlike `aspire otel`, the MCP command doesn't exchange the browser token from a login URL. Start the dashboard with an explicit telemetry API key:
+
 ```bash title="Aspire CLI"
-aspire agent mcp --dashboard-url "http://localhost:18888/login?t=<token>"
+aspire dashboard run --Dashboard:Api:AuthMode=ApiKey --Dashboard:Api:PrimaryApiKey="<api-key>"
 ```
+
+Then start the MCP server in a separate terminal with the dashboard base URL and the same key:
+
+```bash title="Aspire CLI"
+aspire agent mcp --dashboard-url "http://localhost:18888" --api-key "<api-key>"
+```
+
+Use a high-entropy key and don't commit or share it. For more information, see [Secure the telemetry API endpoint](/dashboard/security-considerations/#telemetry-api-endpoint).
 
 ## Sample
 

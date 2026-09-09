@@ -126,15 +126,21 @@ aspire otel spans --dashboard-url "http://localhost:18888/login?t=<token>"
 
 ### Use Aspire MCP with the standalone dashboard
 
-Start the MCP server in dashboard-only mode using `--dashboard-url`:
+The MCP command doesn't exchange the browser token from a dashboard login URL. To use dashboard-only MCP with authentication, start the dashboard with an explicit telemetry API key:
 
 ```bash title="Aspire CLI"
-aspire agent mcp --dashboard-url "http://localhost:18888/login?t=<token>"
+aspire dashboard run --Dashboard:Api:AuthMode=ApiKey --Dashboard:Api:PrimaryApiKey="<api-key>"
+```
+
+Then start the MCP server in a separate terminal with the dashboard base URL and the same key:
+
+```bash title="Aspire CLI"
+aspire agent mcp --dashboard-url "http://localhost:18888" --api-key "<api-key>"
 ```
 
 This exposes the dashboard's telemetry tools to an MCP-compatible AI assistant, not the AppHost's resource-management tools.
 
-Configuration is required in the agent to use the MCP server. For configuration details, see [Aspire MCP server configuration](/get-started/aspire-mcp-server/#configuration). The `--dashboard-url` must be passed as a command line argument when configuring the MCP server for standalone use.
+Use a high-entropy key and don't commit or share it. Configuration is required in the agent to use the MCP server. For configuration details, see [Aspire MCP server configuration](/get-started/aspire-mcp-server/#configuration). For telemetry API security details, see [Secure the telemetry API endpoint](/dashboard/security-considerations/#telemetry-api-endpoint).
 
 ### Sample skill for standalone dashboard
 
