@@ -1022,7 +1022,12 @@ await builder.build().run();`,
 };
 ---
 
-<div class="container" data-apphost-builder data-editor-motion-enabled="true">
+<div
+  class="container"
+  data-apphost-builder
+  data-editor-motion-enabled="true"
+  data-examples-error={Astro.locals.t('appHostBuilder.examplesError')}
+>
   <div class="header" dir={Astro.locals.t.dir()}>
     <Heading>{heading}</Heading>
     {description && <p>{description}</p>}
