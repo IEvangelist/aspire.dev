@@ -82,7 +82,7 @@ function escapeRegExp(value: string): string {
 }
 
 describe('AppHost language registry', () => {
-  test('keeps the canonical order and enables only the established languages initially', () => {
+  test('keeps the canonical order and returns the registry-enabled languages', () => {
     expect(appHostLanguageConfig.languages.map((language) => language.id)).toEqual([
       'typescript',
       'csharp',
@@ -91,10 +91,11 @@ describe('AppHost language registry', () => {
       'java',
       'rust',
     ]);
-    expect(getEnabledAppHostLanguages().map((language) => language.id)).toEqual([
-      'typescript',
-      'csharp',
-    ]);
+    expect(getEnabledAppHostLanguages().map((language) => language.id)).toEqual(
+      appHostLanguageConfig.languages
+        .filter((language) => language.enabled)
+        .map((language) => language.id)
+    );
   });
 
   test('normalizes exact aliases without substring collisions', () => {
@@ -103,7 +104,11 @@ describe('AppHost language registry', () => {
     expect(normalizeAppHostLanguage('C#')).toBe('csharp');
     expect(normalizeAppHostLanguage('javascript')).toBeUndefined();
     expect(normalizeAppHostLanguage('mongo')).toBeUndefined();
-    expect(normalizeAppHostLanguage('python')).toBeUndefined();
+    expect(normalizeAppHostLanguage('python')).toBe(
+      appHostLanguageConfig.languages.find((language) => language.id === 'python')?.enabled
+        ? 'python'
+        : undefined
+    );
     expect(normalizeAppHostLanguage('python', false)).toBe('python');
   });
 
@@ -354,7 +359,11 @@ builder.run()
 </AppHostTabs>
 `;
 
-    const rendered = renderAppHostTabsInMarkdown(markdown, appHostLanguageConfig.languages);
+    const languages = appHostLanguageConfig.languages.map((language) => ({
+      ...language,
+      enabled: ['typescript', 'csharp'].includes(language.id),
+    }));
+    const rendered = renderAppHostTabsInMarkdown(markdown, languages);
 
     expect(rendered).toContain('### TypeScript');
     expect(rendered).toContain('### C#');
@@ -397,7 +406,11 @@ builder.run()
     </AppHostTabs>
 `;
 
-    const rendered = renderAppHostTabsInMarkdown(markdown, appHostLanguageConfig.languages);
+    const languages = appHostLanguageConfig.languages.map((language) => ({
+      ...language,
+      enabled: ['typescript', 'csharp'].includes(language.id),
+    }));
+    const rendered = renderAppHostTabsInMarkdown(markdown, languages);
 
     expect(rendered).toContain('    ### TypeScript');
     expect(rendered).toContain('    ### C#');
@@ -412,7 +425,11 @@ Python preview content
 </AppHostLanguagePivot>
 `;
 
-    const rendered = renderAppHostTabsInMarkdown(markdown, appHostLanguageConfig.languages);
+    const languages = appHostLanguageConfig.languages.map((language) => ({
+      ...language,
+      enabled: language.id !== 'python',
+    }));
+    const rendered = renderAppHostTabsInMarkdown(markdown, languages);
 
     expect(rendered).toContain('TypeScript content');
     expect(rendered).not.toContain('Python preview content');
