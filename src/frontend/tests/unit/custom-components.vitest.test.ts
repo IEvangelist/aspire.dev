@@ -626,6 +626,7 @@ const basicRenderCases: BasicRenderCase[] = [
       'data-editor-caret',
       'data-editor-motion-toggle',
       'data-disable-copy',
+      'data-pagefind-ignore',
       'data-toggle="database"',
     ],
   },
