@@ -1259,6 +1259,44 @@ test('sidebar collapse toggle stays visible without overlapping the H1 on no-TOC
   ).toBe(true);
 });
 
+test('right TOC keeps its configured width across zoom-equivalent desktop widths', async ({
+  page,
+}) => {
+  test.skip(
+    page.viewportSize()?.width !== 1440,
+    'The responsive TOC width matrix is covered once from the desktop project.'
+  );
+
+  await page.goto('/app-host/certificate-configuration/');
+  await dismissCookieConsentIfVisible(page);
+  await waitForTopicSidebarReady(page);
+
+  const tocContainer = page.locator('.right-sidebar-panel > .sl-container');
+
+  for (const width of [1920, 1680, 1600, 1599, 1536, 1440, 1280, 1152]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(tocContainer).toBeVisible();
+
+    const dimensions = await tocContainer.evaluate((container) => {
+      const panel = container.parentElement;
+      if (!panel) return null;
+
+      return {
+        configuredWidth: Number.parseFloat(getComputedStyle(panel).flexBasis),
+        renderedWidth: container.getBoundingClientRect().width,
+      };
+    });
+
+    expect(dimensions).not.toBeNull();
+    if (!dimensions) continue;
+
+    expect(
+      dimensions.renderedWidth,
+      `Expected the right TOC to retain its configured width at a ${width}px CSS viewport.`
+    ).toBeGreaterThanOrEqual(dimensions.configuredWidth - 1);
+  }
+});
+
 test('Aspire 13.5 preserves published section anchors', async ({ page }) => {
   test.skip(
     page.viewportSize()?.width !== 1440,

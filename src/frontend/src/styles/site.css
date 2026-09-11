@@ -1550,7 +1550,7 @@ it configures at which point the mobile toc should be replaced with the normal t
   }
 }
 
-/* remember to also update this value accordingly */
+/* Keep this breakpoint in sync with the 99.999rem upper bound above. */
 @media (min-width: 100rem) {
   :root[data-has-toc] {
     --sl-content-pad-x: 1.5rem;
@@ -1567,18 +1567,6 @@ it configures at which point the mobile toc should be replaced with the normal t
 
   :root[data-has-toc] .lg\:sl-block {
     display: block;
-  }
-
-  :root[data-has-toc] .right-sidebar-panel > .sl-container {
-    max-width: calc(
-      (
-        (
-            100vw - var(--sl-sidebar-width) - 2 * var(--sl-content-pad-x) - 2 *
-              var(--sl-sidebar-pad-x)
-          ) *
-          0.2 /* MAGIC NUMBER 🥲 */
-      )
-    );
   }
 
   :root[data-has-toc] .content-panel > .sl-container {
