@@ -1490,6 +1490,20 @@ it configures at which point the mobile toc should be replaced with the normal t
     display: flex;
   }
 
+  /* The mobile TOC replaces the right sidebar in this range. Release
+     the reserved sidebar column so the main content can use the space. */
+  :root[data-has-toc] .right-sidebar-container {
+    width: 0;
+  }
+
+  :root[data-has-toc] .right-sidebar-panel {
+    display: none;
+  }
+
+  :root[data-has-sidebar][data-has-toc] .main-pane {
+    width: 100%;
+  }
+
   :root[data-has-toc] .content-panel > .sl-container {
     margin-inline: 0;
   }
@@ -1550,7 +1564,7 @@ it configures at which point the mobile toc should be replaced with the normal t
   }
 }
 
-/* Keep this breakpoint in sync with the 99.999rem upper bound above. */
+/* remember to also update this value accordingly */
 @media (min-width: 100rem) {
   :root[data-has-toc] {
     --sl-content-pad-x: 1.5rem;
@@ -1567,6 +1581,18 @@ it configures at which point the mobile toc should be replaced with the normal t
 
   :root[data-has-toc] .lg\:sl-block {
     display: block;
+  }
+
+  :root[data-has-toc] .right-sidebar-panel > .sl-container {
+    max-width: calc(
+      (
+        (
+            100vw - var(--sl-sidebar-width) - 2 * var(--sl-content-pad-x) - 2 *
+              var(--sl-sidebar-pad-x)
+          ) *
+          0.2 /* MAGIC NUMBER 🥲 */
+      )
+    );
   }
 
   :root[data-has-toc] .content-panel > .sl-container {
