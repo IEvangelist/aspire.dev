@@ -1,6 +1,19 @@
 import { expect, test, type Page } from '@playwright/test';
 import { dismissCookieConsentIfVisible } from '@tests/e2e/helpers';
 
+// Exercise native transitions on desktop and the supported swap fallback on
+// touch projects, matching the other client-navigation regression suites.
+test.beforeEach(async ({ page, isMobile }) => {
+  if (isMobile) {
+    await page.addInitScript(() => {
+      Object.defineProperty(document, 'startViewTransition', {
+        configurable: true,
+        value: undefined,
+      });
+    });
+  }
+});
+
 /**
  * Opens the Pagefind/Starlight search dialog and waits for either the
  * Pagefind input or the dev-mode warning to appear.
