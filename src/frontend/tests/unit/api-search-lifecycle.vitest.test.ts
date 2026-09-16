@@ -50,11 +50,12 @@ describe('API search navigation lifecycle', () => {
       const input = new SearchInput();
       const clear = Object.assign(new EventTarget(), { style: { display: 'none' } });
       const replaceState = vi.fn();
+      const state = { index: 3, scrollX: 0, scrollY: 120 };
       vi.stubGlobal('HTMLInputElement', SearchInput);
       vi.stubGlobal('window', {
         location: new URL('https://aspire.dev/reference/api/csharp/?keep=1&q=old&kinds=method#members'),
       });
-      vi.stubGlobal('history', { replaceState });
+      vi.stubGlobal('history', { replaceState, state });
       const root = {
         querySelector: (query: string) => query.endsWith('-input') ? input : clear,
       } as unknown as HTMLElement;
@@ -62,17 +63,17 @@ describe('API search navigation lifecycle', () => {
       const onClear = vi.fn();
       const { InpageSearchSync } = await import('@components/api-reference/inpage-search-sync');
       const sync = new InpageSearchSync('api', onClear, root, abort.signal);
-      return { sync, abort, input, clear, onClear, replaceState };
+      return { sync, abort, input, clear, onClear, replaceState, state };
     }
 
-    it('preserves unrelated query parameters and fragments and validates restored kinds', async () => {
-      const { sync, replaceState } = await createSync();
+    it('preserves router state, unrelated query parameters and fragments and validates restored kinds', async () => {
+      const { sync, replaceState, state } = await createSync();
       expect(sync.readQuery()).toBe('old');
       expect(sync.readKinds(new Set(['method', 'class']))).toEqual(new Set(['method']));
       expect(sync.readKinds(new Set(['class']))).toEqual(new Set());
       sync.writeUrl('RedisResource', new Set(['class']));
       expect(replaceState).toHaveBeenCalledWith(
-        null, '', '/reference/api/csharp/?keep=1&q=RedisResource&kinds=class#members',
+        state, '', '/reference/api/csharp/?keep=1&q=RedisResource&kinds=class#members',
       );
     });
 
