@@ -62,6 +62,9 @@ overrides:
   uuid@<14.0.0: '>=14.0.0'
 
 patchedDependencies:
+  # Starlight search must initialize and dispose per element across ClientRouter
+  # swaps, not only on DOMContentLoaded (microsoft/aspire.dev#1673).
+  '@astrojs/starlight@0.41.3': patches/@astrojs__starlight@0.41.3.patch
   # Temporary network-resilience fix for getMaterialIconsData (falls back to the
   # vendored .starlight-icons cache when the icon-data fetch fails). Remove once
   # https://github.com/Rettend/starlight-plugin-icons/pull/9 is merged & released.
