@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -276,6 +277,7 @@ public static class LiveStatusEndpointRouteBuilderExtensions
     private static async Task<IResult> YouTubeVerify(
         HttpContext context,
         IYouTubeWebSubSubscriptionState subscriptions,
+        IOptions<LiveStatusOptions> options,
         TimeProvider time,
         ILoggerFactory loggerFactory)
     {
@@ -290,6 +292,19 @@ public static class LiveStatusEndpointRouteBuilderExtensions
         var challenge = query["hub.challenge"].ToString();
         var verifyToken = query["hub.verify_token"].ToString();
         var logger = loggerFactory.CreateLogger("StaticHost.Live.YouTube.WebSub");
+
+        if (string.Equals(mode, "denied", StringComparison.Ordinal))
+        {
+            var channelId = options.Value.YouTube.ChannelId;
+            bool? matchesConfiguredTopic = string.IsNullOrEmpty(channelId)
+                ? null
+                : string.Equals(topic, YouTubeWebSubSubscriptionTransitions.TopicFor(channelId), StringComparison.Ordinal);
+            YouTubeDiagnostics.LogUntrustedDenial(
+                logger, query["hub.reason"].ToString(), !string.IsNullOrEmpty(topic), matchesConfiguredTopic);
+            return string.IsNullOrEmpty(topic)
+                ? Results.BadRequest("Invalid WebSub denial report.")
+                : Results.Ok();
+        }
 
         if (!int.TryParse(query["hub.lease_seconds"], out var leaseSeconds) ||
             string.IsNullOrEmpty(challenge))
@@ -334,8 +349,9 @@ public static class LiveStatusEndpointRouteBuilderExtensions
             return Results.NotFound();
         }
 
-        logger.LogInformation("YouTube WebSub subscription verified for {Topic}; granted lease {LeaseSeconds}s.",
-            topic, leaseSeconds);
+        logger.LogInformation(
+            "YouTube {Operation} acknowledged; callback lease {LeaseSeconds}s. A matching retry does not extend the lease or reset subscription backoff.",
+            "WebSubVerification", leaseSeconds);
         return Results.Text(challenge, "text/plain");
     }
 
@@ -365,8 +381,8 @@ public static class LiveStatusEndpointRouteBuilderExtensions
         var signature = context.Request.Headers["X-Hub-Signature"].ToString();
         if (!YouTubeWebhookHandler.IsValidSignature(youtube.WebhookSecret, bodyBytes, signature))
         {
-            logger.LogWarning("YouTube WebSub signature mismatch.");
-            return Results.Unauthorized();
+            logger.LogWarning("YouTube WebSub signature missing or invalid; acknowledging and discarding the notification without processing.");
+            return Results.Ok();
         }
 
         if (env.IsDevelopment() && options.Value.EnableDevEndpoint && !youtube.IsConfigured)
@@ -408,16 +424,21 @@ public static class LiveStatusEndpointRouteBuilderExtensions
         var channelId = youtube.ChannelId;
         if (string.IsNullOrWhiteSpace(channelId))
         {
-            channelId = await ytClient.ResolveChannelIdAsync(youtube.ChannelHandle, cancellationToken).ConfigureAwait(false);
+            channelId = await ConfirmOperationAsync("NotificationChannelResolution", YouTubeDiagnostics.ChannelsEndpoint,
+                () => ytClient.ResolveChannelIdAsync(youtube.ChannelHandle, cancellationToken)).ConfigureAwait(false);
         }
 
         if (string.IsNullOrWhiteSpace(channelId))
         {
-            logger.LogWarning("Could not resolve YouTube channel id for webhook confirmation.");
+            logger.LogWarning("YouTube {Operation} returned no channel; notification confirmation is unavailable, not confirmed offline.",
+                "NotificationChannelResolution");
             return;
         }
 
-        var live = await ytClient.GetCurrentLiveAsync(channelId, cancellationToken).ConfigureAwait(false);
+        var live = await ConfirmOperationAsync("NotificationConfirmation", YouTubeDiagnostics.SearchEndpoint,
+            () => ytClient.GetCurrentLiveAsync(channelId, cancellationToken)).ConfigureAwait(false);
+        logger.LogInformation("YouTube {Operation} succeeded at {CheckedAt}; observed live {ObservedLive}.",
+            "NotificationConfirmation", DateTimeOffset.UtcNow, live.Live);
         await broadcaster.UpdateAsync(
             new LiveStatusUpdate
             {
@@ -428,6 +449,22 @@ public static class LiveStatusEndpointRouteBuilderExtensions
                     youtube.OfflineConfirmationCount),
             },
             cancellationToken).ConfigureAwait(false);
+
+        async Task<T> ConfirmOperationAsync<T>(string operation, string endpoint, Func<Task<T>> action)
+        {
+            var started = Stopwatch.GetTimestamp();
+            try
+            {
+                return await action().ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+            catch (Exception exception)
+            {
+                YouTubeDiagnostics.LogFailure(logger, exception, operation, endpoint,
+                    elapsedMs: Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+                throw;
+            }
+        }
     }
 
     // --- Dev-only -----------------------------------------------------------
