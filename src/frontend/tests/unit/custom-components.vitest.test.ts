@@ -335,6 +335,21 @@ const basicRenderCases: BasicRenderCase[] = [
     includes: ['Model distributed apps', 'Learn more', '/get-started/app-host/', '--cap-cols: 2'],
   },
   {
+    name: 'ReleaseCommunity renders the Aspire 13.6 core team roster and release contributors',
+    Component: ReleaseCommunity,
+    props: { version: '13.6' },
+    includes: [
+      'The Aspire core team is',
+      '.png?size=96',
+      'Special thanks to everyone whose pull requests shipped in Aspire 13.6',
+      'https://github.com/marshalhayes',
+      'https://github.com/afscrome',
+      'https://github.com/zhiyuanliang-ms',
+      '/community/contributors/',
+      '/community/contributor-guide/',
+    ],
+  },
+  {
     name: 'ReleaseCommunity renders the core team roster and release contributors',
     Component: ReleaseCommunity,
     props: { version: '13.4' },

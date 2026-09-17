@@ -8,6 +8,7 @@ sidebar:
 tableOfContents:
   minHeadingLevel: 2
   maxHeadingLevel: 2
+publishDate: 2026-09-29
 ---
 
 import {
@@ -18,6 +19,7 @@ import {
   Tabs,
 } from '@astrojs/starlight/components';
 import LearnMore from '@components/LearnMore.astro';
+import ReleaseCommunity from '@components/ReleaseCommunity.astro';
 
 Aspire 13.6 makes the dashboard a durable place to investigate applications with **SQLite-backed telemetry and run history**. It also adds **first-party Java and Rust hosting**, an experimental **Azure Container Apps Sandboxes** deployment target, portable volume paths, and more direct workflows across the Aspire CLI and Visual Studio Code.
 
@@ -33,7 +35,7 @@ This release introduces:
 - **More predictable deployment** — isolate deployment state and preserve Kubernetes hostnames and embedded parameter values.
 - **Integration improvements** — debug Blazor WebAssembly apps, discover Dev Tunnel URLs, customize Radius recipes, and protect destructive Azure location changes.
 - **Updated emulator images** — move Azure App Configuration to `1.2.0` and make the Linux-based vNext Cosmos DB emulator the default.
-- **Community contributions** — 13 pull requests from eight contributors span major features, integration improvements, reliability fixes, and project tooling.
+- **Community contributions** — contributions span major features, integration improvements, reliability fixes, and project tooling.
 - **Two breaking changes** — `RunAsEmulator` now selects the Linux-based vNext Cosmos DB emulator, and Azure Front Door origin names now include the backend hostname.
 - …and much more.
 
@@ -324,9 +326,11 @@ Two emulator defaults changed:
 
 Aspire's App Configuration emulator now checks the `/health` endpoint on the `1.2.0` image, so `OnResourceReady` runs only after the emulator accepts requests. The Cosmos DB change also affects runtime behavior and persisted data; review the [breaking-change guidance](#breaking-changes) before upgrading.
 
-## 🙏 Community contributions
+## 🙏 Community
 
-Thirteen pull requests from eight community contributors helped shape Aspire 13.6:
+<span id="community-contributions"></span>
+
+Aspire is built in the open, and this release wouldn't be what it is without you. A huge thank you to all community contributors who helped make Aspire 13.6 possible. Highlights include:
 
 - [@marshalhayes](https://github.com/marshalhayes) brought the [first-party Java hosting integration](https://github.com/microsoft/aspire/pull/18033) from the Community Toolkit into Aspire and expanded it with framework, AppHost, publishing, and debugger support.
 - [@afscrome](https://github.com/afscrome) added [first-party Rust hosting and debugging](https://github.com/microsoft/aspire/pull/18906), enabled [Cosmos DB emulator OpenTelemetry](https://github.com/microsoft/aspire/pull/15671), and made pasted `aspire doctor` output render readably in the repository's issue template.
@@ -337,7 +341,7 @@ Thirteen pull requests from eight community contributors helped shape Aspire 13.
 - [@vivekjm](https://github.com/vivekjm) disabled browser autocomplete for dashboard filter controls.
 - [@flojon](https://github.com/flojon) fixed TypeScript code generation so zero-capability resource builders keep their required Promise wrappers.
 
-We're always excited to [see community contributions](/community/contributors/)! If you'd like to get involved, check out our [contributing guide](/community/contributor-guide/).
+<ReleaseCommunity version="13.6" />
 
 ## ⚠️ Breaking changes
 
