@@ -156,6 +156,129 @@ public sealed class LiveEndpointsTests
         Assert.Equal(HttpStatusCode.OK, replayResponse.StatusCode);
         AssertNoStore(replayResponse);
         Assert.False((await server.Broadcaster.GetCurrentAsync()).Twitch.Live);
+        Assert.Contains(server.Logs.Entries, entry =>
+            entry.Fields.TryGetValue("MessageId", out var id) && Equals(id, "test-message-1"));
+    }
+
+    [Fact]
+    public async Task TwitchWebhook_SignedUnparseableTimestamp_IsRejectedWithSanitizedHeader()
+    {
+        await using var server = await LiveHttpServer.StartAsync();
+        using var request = TwitchRequest(server, "notification", "{}",
+            timestamp: LiveTestHelpers.LogInjectionPayload);
+        using var response = await server.Client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        AssertNoStore(response);
+        Assert.False((await server.Broadcaster.GetCurrentAsync()).IsLive);
+        var entry = Assert.Single(server.Logs.Entries);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Equal("payload-sentinel__forged-line___", entry.Fields["Timestamp"]);
+        Assert.Equal("Twitch webhook timestamp payload-sentinel__forged-line___ (sanitized) is stale or unparseable; rejecting.",
+            entry.Message);
+        Assert.Null(entry.Exception);
+        Assert.Equal(2, entry.Fields.Count);
+    }
+
+    [Theory]
+    [InlineData(-11)]
+    [InlineData(5)]
+    public async Task TwitchWebhook_RejectedTimestamp_RetainsDiagnosticValue(int minutesFromNow)
+    {
+        await using var server = await LiveHttpServer.StartAsync();
+        var timestamp = server.Time.GetUtcNow().AddMinutes(minutesFromNow).ToString("O");
+        using var request = TwitchRequest(server, "notification", "{}", timestamp: timestamp);
+        using var response = await server.Client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        AssertNoStore(response);
+        var entry = Assert.Single(server.Logs.Entries);
+        Assert.Equal(timestamp, entry.Fields["Timestamp"]);
+        Assert.Contains(timestamp, entry.Message);
+        LiveTestHelpers.AssertSafeLogs(server.Logs);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task TwitchWebhook_SignedDuplicateId_IsLoggedSafely(bool completed)
+    {
+        await using var server = await LiveHttpServer.StartAsync();
+        const string messageId = LiveTestHelpers.LogInjectionPayload;
+        var acquisition = await server.Coordination.AcquireTwitchMessageAsync(messageId);
+        Assert.Equal(TwitchMessageAcquisitionStatus.Acquired, acquisition.Status);
+        await using (var lease = Assert.IsAssignableFrom<ITwitchMessageLease>(acquisition.Lease))
+        {
+            if (completed) await lease.CompleteAsync();
+            using var request = TwitchRequest(server, "notification", "{}", messageId: messageId);
+            using var response = await server.Client.SendAsync(request);
+
+            Assert.Equal(completed ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable, response.StatusCode);
+            AssertNoStore(response);
+            Assert.False((await server.Broadcaster.GetCurrentAsync()).IsLive);
+            var entry = Assert.Single(server.Logs.Entries);
+            Assert.Equal(LogLevel.Debug, entry.Level);
+            Assert.Contains(completed ? "replay ignored" : "already being processed", entry.Message);
+            Assert.Equal("payload-sentinel__forged-line___", entry.Fields["MessageId"]);
+            Assert.Equal(completed
+                ? "Twitch webhook replay ignored for message payload-sentinel__forged-line___."
+                : "Twitch webhook message payload-sentinel__forged-line___ is already being processed; asking Twitch to retry.",
+                entry.Message);
+            Assert.Null(entry.Exception);
+            Assert.Equal(2, entry.Fields.Count);
+        }
+
+        server.Logs.Entries.Clear();
+        using var retry = TwitchRequest(server, "notification",
+            """{"subscription":{"type":"stream.online"},"event":{"broadcaster_user_login":"aspiredotdev"}}""",
+            messageId: messageId);
+        using var retryResponse = await server.Client.SendAsync(retry);
+        Assert.Equal(HttpStatusCode.OK, retryResponse.StatusCode);
+        Assert.Equal(!completed, (await server.Broadcaster.GetCurrentAsync()).Twitch.Live);
+        if (completed)
+        {
+            var entry = Assert.Single(server.Logs.Entries);
+            Assert.Equal("payload-sentinel__forged-line___", entry.Fields["MessageId"]);
+            Assert.Equal("Twitch webhook replay ignored for message payload-sentinel__forged-line___.", entry.Message);
+            Assert.Null(entry.Exception);
+            Assert.Equal(2, entry.Fields.Count);
+        }
+        else
+        {
+            LiveTestHelpers.AssertSafeLogs(server.Logs);
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task TwitchWebhook_SignedRevocationAndUnknownType_LogSafely(bool revocation)
+    {
+        await using var server = await LiveHttpServer.StartAsync();
+        var before = await server.Broadcaster.GetStateAsync();
+        using var request = TwitchRequest(
+            server, revocation ? "revocation" : LiveTestHelpers.LogInjectionPayload,
+            LiveTestHelpers.LogInjectionPayload);
+        using var response = await server.Client.SendAsync(request);
+
+        Assert.Equal(revocation ? HttpStatusCode.NoContent : HttpStatusCode.OK, response.StatusCode);
+        AssertNoStore(response);
+        Assert.Equal(before, await server.Broadcaster.GetStateAsync());
+        var entry = Assert.Single(server.Logs.Entries);
+        Assert.Equal(revocation ? LogLevel.Warning : LogLevel.Debug, entry.Level);
+        Assert.Contains(revocation ? "subscription revoked" : "unknown message type", entry.Message);
+        if (revocation)
+        {
+            LiveTestHelpers.AssertSafeLogs(server.Logs);
+        }
+        else
+        {
+            Assert.Equal("payload-sentinel__forged-line___", entry.Fields["MessageType"]);
+            Assert.Equal("Twitch webhook of unknown message type payload-sentinel__forged-line___ (sanitized).",
+                entry.Message);
+            Assert.Null(entry.Exception);
+            Assert.Equal(2, entry.Fields.Count);
+        }
     }
 
     [Fact]
@@ -176,6 +299,7 @@ public sealed class LiveEndpointsTests
         AssertNoStore(retry);
         Assert.Equal("retry", await retry.Content.ReadAsStringAsync());
         Assert.Equal(renewAt, await server.Subscriptions.GetRenewAtAsync());
+        LiveTestHelpers.AssertSafeLogs(server.Logs, pending.Topic, pending.VerifyToken);
     }
 
     [Theory]
@@ -199,6 +323,64 @@ public sealed class LiveEndpointsTests
         Assert.Equal(expected, response.StatusCode);
         AssertNoStore(response);
         Assert.Equal(DateTimeOffset.MinValue, await server.Subscriptions.GetRenewAtAsync());
+    }
+
+    [Theory]
+    [InlineData("mode", true)]
+    [InlineData("unsubscribe", true)]
+    [InlineData("missing-topic", true)]
+    [InlineData("topic", true)]
+    [InlineData("topic", false)]
+    [InlineData("token", true)]
+    public async Task YouTubeVerification_RejectionLogsOnlyClassificationsAndSafeFields(
+        string invalid, bool configured)
+    {
+        const string invalidVerifyToken = "verification-secret-sentinel\r\nforged-line\u0085\u2028\u2029";
+        await using var server = await LiveHttpServer.StartAsync(youtubeConfigured: configured);
+        var pending = Assert.IsType<YouTubeWebSubSubscriptionRequest>(
+            await server.Subscriptions.TryBeginSubscriptionAsync("channel-123", server.Time.GetUtcNow()));
+        var mode = invalid switch
+        {
+            "mode" => LiveTestHelpers.LogInjectionPayload,
+            "unsubscribe" => "unsubscribe",
+            _ => "subscribe",
+        };
+        var submitted = pending with
+        {
+            Topic = invalid switch
+            {
+                "missing-topic" => "",
+                "token" => pending.Topic,
+                _ => LiveTestHelpers.LogInjectionPayload,
+            },
+            VerifyToken = invalid == "token" ? invalidVerifyToken : pending.VerifyToken,
+        };
+        var before = server.Subscriptions.Current;
+        using var response = await server.Client.GetAsync(
+            VerificationUrl(submitted, LiveTestHelpers.LogInjectionPayload, mode: mode));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        AssertNoStore(response);
+        Assert.Equal(before, server.Subscriptions.Current);
+        Assert.False((await server.Broadcaster.GetCurrentAsync()).IsLive);
+        var entry = Assert.Single(server.Logs.Entries);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Equal("WebSubVerification", entry.Fields["Operation"]);
+        Assert.Equal(invalid is "mode" or "unsubscribe" or "missing-topic" ? "Malformed" : "Unexpected",
+            entry.Fields["RejectionReason"]);
+        Assert.Equal(invalid == "mode" ? "Unknown" : invalid == "unsubscribe" ? "Unsubscribe" : "Subscribe",
+            entry.Fields["ModeClassification"]);
+        Assert.Equal(invalid != "missing-topic", entry.Fields["TopicPresent"]);
+        Assert.Equal(configured ? (bool?)(invalid == "token") : null, entry.Fields["MatchesConfiguredTopic"]);
+        LiveTestHelpers.AssertSafeLogs(server.Logs, pending.Topic, pending.VerifyToken, "verification-secret-sentinel");
+
+        using var confirmation = await server.Client.GetAsync(
+            VerificationUrl(pending, LiveTestHelpers.LogInjectionPayload));
+        Assert.Equal(HttpStatusCode.OK, confirmation.StatusCode);
+        Assert.Equal("text/plain", confirmation.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(LiveTestHelpers.LogInjectionPayload, await confirmation.Content.ReadAsStringAsync());
+        Assert.True(await server.Subscriptions.GetRenewAtAsync() > server.Time.GetUtcNow());
+        LiveTestHelpers.AssertSafeLogs(server.Logs, pending.Topic, pending.VerifyToken, "verification-secret-sentinel");
     }
 
     [Theory]
@@ -365,17 +547,17 @@ public sealed class LiveEndpointsTests
     }
 
     private static HttpRequestMessage TwitchRequest(
-        LiveHttpServer server, string messageType, string body, bool stale = false)
+        LiveHttpServer server, string messageType, string body, bool stale = false,
+        string messageId = "test-message-1", string? timestamp = null)
     {
-        const string messageId = "test-message-1";
-        var timestamp = server.Time.GetUtcNow().AddMinutes(stale ? -11 : 0).ToString("O");
+        timestamp ??= server.Time.GetUtcNow().AddMinutes(stale ? -11 : 0).ToString("O");
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/live/twitch/webhook")
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         };
-        request.Headers.Add("Twitch-Eventsub-Message-Id", messageId);
-        request.Headers.Add("Twitch-Eventsub-Message-Timestamp", timestamp);
-        request.Headers.Add("Twitch-Eventsub-Message-Type", messageType);
+        request.Headers.TryAddWithoutValidation("Twitch-Eventsub-Message-Id", messageId);
+        request.Headers.TryAddWithoutValidation("Twitch-Eventsub-Message-Timestamp", timestamp);
+        request.Headers.TryAddWithoutValidation("Twitch-Eventsub-Message-Type", messageType);
         request.Headers.Add("Twitch-Eventsub-Message-Signature",
             "sha256=" + Convert.ToHexStringLower(HMACSHA256.HashData(
                 Encoding.UTF8.GetBytes(LiveHttpServer.WebhookSecret),
@@ -386,8 +568,8 @@ public sealed class LiveEndpointsTests
     private static string VerificationUrl(
         YouTubeWebSubSubscriptionRequest pending, string challenge,
         string lease = "432000", string mode = "subscribe") =>
-        $"/api/live/youtube/webhook?hub.mode={mode}&hub.topic={Uri.EscapeDataString(pending.Topic)}" +
-        $"&hub.verify_token={pending.VerifyToken}&hub.lease_seconds={lease}&hub.challenge={challenge}";
+        $"/api/live/youtube/webhook?hub.mode={Uri.EscapeDataString(mode)}&hub.topic={Uri.EscapeDataString(pending.Topic)}" +
+        $"&hub.verify_token={Uri.EscapeDataString(pending.VerifyToken)}&hub.lease_seconds={lease}&hub.challenge={Uri.EscapeDataString(challenge)}";
 
     private sealed class LiveHttpServer(
         WebApplication app, HttpClient client, FakeTimeProvider time,
@@ -413,7 +595,8 @@ public sealed class LiveEndpointsTests
             });
             builder.WebHost.UseTestServer();
             var logs = new YouTubeRecordingLogger<LiveEndpointsTests>();
-            builder.Logging.AddProvider(new YouTubeLoggerProvider(logs));
+            builder.Logging.AddFilter<WebhookLoggerProvider>(level => level >= LogLevel.Debug);
+            builder.Logging.AddProvider(new WebhookLoggerProvider(logs));
             var time = new FakeTimeProvider(DateTimeOffset.UnixEpoch);
             var options = new LiveStatusOptions
             {
@@ -458,10 +641,11 @@ public sealed class LiveEndpointsTests
             return new LiveHttpServer(app, app.GetTestClient(), time, streamEnded, logs);
         }
 
-        private sealed class YouTubeLoggerProvider(ILogger logger) : ILoggerProvider
+        private sealed class WebhookLoggerProvider(ILogger logger) : ILoggerProvider
         {
             public ILogger CreateLogger(string categoryName) =>
-                categoryName.StartsWith("StaticHost.Live.YouTube.", StringComparison.Ordinal)
+                categoryName.StartsWith("StaticHost.Live.YouTube.", StringComparison.Ordinal) ||
+                categoryName == "StaticHost.Live.Twitch.Webhook"
                     ? logger : NullLogger.Instance;
             public void Dispose() { }
         }
