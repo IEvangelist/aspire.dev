@@ -225,7 +225,7 @@ function computeSourceUrl() {
     if (window.__aspireWcpConsentInitialized) return;
     window.__aspireWcpConsentInitialized = true;
 
-    // The four "Manage cookies" buttons are always server-rendered. Once WCP
+    // Cookie controls, including the Legal text action, are server-rendered. Once WCP
     // tells us whether consent is required for this region, reflect it on <html>
     // so CSS can hide those buttons where there is nothing to manage (e.g. the
     // US). Persist the answer so a returning visitor doesn't see the button
