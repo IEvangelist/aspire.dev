@@ -277,6 +277,8 @@ The Aspire extension brings more of the development lifecycle into the Aspire pa
 
 ## 🚢 Deployment
 
+### Deployment state and output improvements
+
 Deployment state and Kubernetes output are more portable and predictable:
 
 - **Isolated state under `ASPIRE_HOME`.** Deployment state now lives under `<ASPIRE_HOME>/deployments/<AppHostSha>/<environment>.json`, keeping side-by-side CLI and CI runs out of the shared user profile. Sibling single-file AppHosts in one directory also receive distinct state identities.
@@ -288,6 +290,23 @@ Deployment state and Kubernetes output are more portable and predictable:
   See [Deployment state caching](/deployment/deployment-state-caching/),
   [Kubernetes ingress](/deployment/kubernetes-ingress/), and [Kubernetes
   clusters](/deployment/kubernetes/clusters/).
+</LearnMore>
+
+### Azure Container Apps Express environments
+
+Azure Container Apps environments can opt into the Express preview with `AsExpress`. Express offers rapid provisioning and fewer infrastructure settings to configure, helping you get HTTP APIs, web frontends, and AI backends deployed quickly. Automatic scaling to zero when idle, on-demand scale-out, and optimized cold starts make it a good fit for apps with intermittent or unpredictable traffic.
+
+<Aside type="caution" title="Experimental">
+  Express support is experimental and reports
+  [ASPIREACAEXPRESS001](/diagnostics/aspireacaexpress001/), which you must
+  suppress to build. Check the [Azure Container Apps Express
+  overview](https://learn.microsoft.com/azure/container-apps/express-overview)
+  for current availability and supported features.
+</Aside>
+
+<LearnMore>
+  See [Express
+  environments](/deployment/azure/container-apps/#express-environments).
 </LearnMore>
 
 ## 📦 Integration updates
