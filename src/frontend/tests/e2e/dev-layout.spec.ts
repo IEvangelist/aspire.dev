@@ -475,12 +475,56 @@ test('desktop header actions use consistent spacing', async ({ page }) => {
     expect(hubIcon.width).toBeCloseTo(20, 0);
     expect(hubIcon.height).toBeCloseTo(20, 0);
     const docs = (await banner.getByRole('link', { name: 'Docs', exact: true }).boundingBox())!;
+    const videos = (await banner.locator('.live-btn:visible').boundingBox())!;
     const start = (await banner.getByRole('link', { name: 'Try Aspire', exact: true }).boundingBox())!;
+    expect(videos.x - install.x - install.width).toBeCloseTo(8, 0);
+    expect(dev.x - videos.x - videos.width).toBeCloseTo(8, 0);
     expect(docs.x - dev.x - dev.width).toBeCloseTo(8, 0);
     expect(start.x - docs.x - docs.width).toBeCloseTo(8, 0);
   }
   await page.getByRole('banner').getByRole('link', { name: 'Dev Hub', exact: true }).hover();
   await expect(page.getByRole('tooltip')).toContainText('Dev Hub');
+});
+
+test('header icon order and Videos selected effect survive client navigation', async ({ page }) => {
+  for (const theme of ['light', 'dark']) {
+    await page.goto('/hub/');
+    await page.evaluate((value) => {
+      localStorage.setItem('starlight-theme', value);
+      document.documentElement.dataset.theme = value;
+    }, theme);
+    const hub = page.getByRole('banner').getByRole('link', { name: 'Dev Hub', exact: true });
+    const videos = page.locator('header .live-btn:visible');
+    const selectedStyle = await hub.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { color: style.color, background: style.backgroundColor, radius: style.borderRadius };
+    });
+    await expect(videos).not.toHaveAttribute('aria-current');
+    for (const group of ['.right-group', '.right-group-mobile']) {
+      await expect(page.locator(`header ${group} > .header-icon-btn`).nth(0)).toHaveClass(/install-cli-btn/);
+      await expect(page.locator(`header ${group} > .header-icon-btn`).nth(1)).toHaveClass(/live-btn/);
+      await expect(page.locator(`header ${group} > .header-icon-btn`).nth(2)).toHaveClass(/dev-center-btn/);
+      await expect(page.locator(`header ${group} > .header-icon-btn`).nth(3)).toHaveClass(/cookie-consent-btn/);
+    }
+    const hubBox = (await hub.boundingBox())!;
+    const videoBox = (await videos.boundingBox())!;
+    expect(hubBox.x - videoBox.x - videoBox.width).toBeCloseTo(8, 0);
+    await videos.click();
+    await expect(page).toHaveURL(/\/community\/videos\/$/);
+    await expect(videos).toHaveAttribute('aria-current', 'page');
+    await expect(hub).not.toHaveAttribute('aria-current');
+    await expect(videos).toHaveCSS('color', selectedStyle.color);
+    await expect(videos).toHaveCSS('background-color', selectedStyle.background);
+    await expect(videos).toHaveCSS('border-radius', selectedStyle.radius);
+    await page.keyboard.press('Tab');
+    await videos.focus();
+    await expect(videos).toHaveCSS('outline-style', 'solid');
+    await expect(videos).toHaveCSS('color', 'rgb(31, 30, 51)');
+    await hub.click();
+    await expect(page).toHaveURL(/\/hub\/$/);
+    await expect(hub).toHaveAttribute('aria-current', 'page');
+    await expect(videos).not.toHaveAttribute('aria-current');
+  }
 });
 
 test('Dev Hub has a distinct active header button on hub and browse routes in both themes', async ({ page }) => {
@@ -491,6 +535,25 @@ test('Dev Hub has a distinct active header button on hub and browse routes in bo
       await page.mouse.move(0, 0);
       await hub.evaluate((element) => element.blur());
       await page.evaluate((value) => document.documentElement.setAttribute('data-theme', value), theme);
+      const foreground = await hub.evaluate((element) => {
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--sl-color-text)';
+        element.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      });
+      await expect(page.locator('header .site-title span')).toHaveCSS('color', foreground);
+      for (const control of await page.locator('header :is(.header-icon-btn, .docs-btn, .docs-btn-mobile, site-search > button[data-open-modal]):visible').all()) {
+        const expectedColor = await control.getAttribute('aria-current') === 'page' ? 'rgb(31, 30, 51)' : foreground;
+        await expect(control).toHaveCSS('color', expectedColor);
+        await control.hover();
+        await expect(control).toHaveCSS('color', expectedColor);
+        await control.focus();
+        await expect(control).toHaveCSS('color', expectedColor);
+        await control.evaluate((element) => element.blur());
+      }
+      await page.mouse.move(0, 0);
       await expect(hub).toBeVisible();
       if (route === '/') {
         await expect(hub).not.toHaveAttribute('aria-current');
@@ -506,9 +569,10 @@ test('Dev Hub has a distinct active header button on hub and browse routes in bo
           return { foreground: style.color, background: style.backgroundColor };
         });
         expect(colors.foreground).not.toBe(colors.background);
+        expect(colors.foreground).toBe('rgb(31, 30, 51)');
         if (theme === 'light') {
           expect(colors.background).toBe('rgb(213, 210, 246)');
-          expect(colors.foreground).toBe('rgb(81, 43, 212)');
+          expect(colors.foreground).toBe(foreground);
         }
         await hub.focus();
         await expect(hub).not.toHaveCSS('outline-style', 'none');
@@ -520,7 +584,7 @@ test('Dev Hub has a distinct active header button on hub and browse routes in bo
         for (const control of await page.locator('header :is(.dev-center-btn, .dev-center-btn-mobile, .install-cli-btn):visible').all()) {
           await control.hover();
           await expect(control).toHaveCSS('background-color', 'rgb(213, 210, 246)');
-          await expect(control).toHaveCSS('color', 'rgb(81, 43, 212)');
+          await expect(control).toHaveCSS('color', foreground);
           await control.focus();
           await expect(control).toHaveCSS('outline-style', 'solid');
           await control.evaluate((element) => element.blur());
@@ -623,7 +687,7 @@ test('Developer Hub typography and glossary controls reflow in both themes', asy
       });
       expect(layout.overflow).toBe(false);
       expect(layout.headingSize).toBeGreaterThanOrEqual(32);
-      expect(layout.hasTagline).toBe(true);
+      expect(layout.hasTagline).toBe(false);
       expect(layout.pillHeights.every((height) => height >= (width <= 600 ? 44 : 36))).toBe(true);
       expect(layout.searchClass).toContain('inpage-search-input');
       await expect(page.locator('glossary-browser select')).toHaveCount(0);
@@ -904,21 +968,26 @@ test('Hub search surfaces stay consistent inside tinted control panels', async (
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
   const hubSearchBackground = await page.locator('.dev-search').evaluate((element) => getComputedStyle(element).backgroundColor);
 
+  await page.goto('/integrations/gallery/');
+  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+  const inputBackground = await page.locator('main .search-field-input').evaluate((element) => getComputedStyle(element).backgroundColor);
+
   await page.goto('/hub/browse/');
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
   await expect(page.locator('.browse-search')).toBeVisible();
   const browseBackgrounds = await page.locator('.inpage-search-input, .browse-filter-group summary')
     .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).backgroundColor));
-  expect(browseBackgrounds.every((background) => background === hubSearchBackground)).toBe(true);
-  expect(await page.locator('.browse-controls').evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(hubSearchBackground);
+  expect(browseBackgrounds.every((background) => background === inputBackground)).toBe(true);
+  expect(await page.locator('.browse-controls').evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(inputBackground);
 
   await page.goto('/hub/glossary/');
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
   await expect(page.locator('.glossary-controls')).toBeVisible();
-  const glossaryBackgrounds = await page.locator('.glossary-controls .inpage-search-input, .glossary-controls .api-filter-chip:not(.active)')
+  await expect(page.locator('.glossary-controls .inpage-search-input')).toHaveCSS('background-color', inputBackground);
+  const glossaryBackgrounds = await page.locator('.glossary-controls .api-filter-chip:not(.active)')
     .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).backgroundColor));
   expect(glossaryBackgrounds.every((background) => background === hubSearchBackground)).toBe(true);
-  expect(await page.locator('.glossary-filter-panel').evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(hubSearchBackground);
+  expect(await page.locator('.glossary-filter-panel').evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(inputBackground);
 });
 
 test('AWS discovery opens a first-party overview with provider guidance', async ({ page }) => {
