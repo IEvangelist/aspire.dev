@@ -315,7 +315,7 @@ Existing integrations add new workflows and safer defaults:
 
 - **Blazor WebAssembly debugging.** Standalone and hosted WebAssembly apps can expose dashboard commands for starting and stopping an Edge or Chrome debugging session. The related Dotnet project gateway APIs are also available to polyglot AppHosts, but remain experimental and run-only.
 - **Dev Tunnel URL discovery.** Tunnel, inspect, and local endpoint URLs appear as highlighted resource properties, and a **Show tunnel URLs** command surfaces them through the dashboard Interaction Service.
-- **Radius recipe configuration.** Experimental APIs configure recipe parameters and required secrets globally or per resource from the AppHost.
+- **Radius recipe configuration.** Experimental APIs configure recipe parameters and required secrets globally or per resource from the AppHost. The integration now recommends [Radius v0.60.2](https://github.com/radius-project/radius/releases/tag/v0.60.2); v0.60.0 remains the minimum supported control-plane version.
 - **Safer Azure location changes.** Changing a location-immutable Azure resource requires an explicit confirmation before Aspire deletes and recreates it. The CLI projects that confirmation as `--confirm-delete`.
 - **Azure identity reliability.** Role-assignment Bicep detects service principal and federated workload identity credentials more accurately, and the experimental Sandboxes integration now binds its deployment principal to the scoped data-owner role correctly.
 - **Cosmos DB client health.** `AddAzureCosmosClient` and `AddKeyedAzureCosmosClient` register default-on health checks that probe account reachability. Set `DisableHealthChecks` to opt out.
