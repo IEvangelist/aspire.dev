@@ -241,6 +241,10 @@ missing from the raw dump are taken from that canonical export, with package ide
 and unambiguous ownership checks. Union members are preserved during transformation;
 missing or unsupported enum definitions fail generation rather than becoming empty
 interface stubs. Semantic validation checks enum members in the final Twoslash bundle.
+The bundle represents enums as string unions with companion constant objects.
+When independent packages export the same enum short name, the shared bundle
+combines their literals; each package's API JSON retains its exact enum surface.
+Use the package-specific SDK to validate behavior that depends on those differences.
 The generator rejects nonzero SDK dump exits and error diagnostics even when a JSON
 file was produced. An incomplete dump isn't a successful API-generation result.
 
