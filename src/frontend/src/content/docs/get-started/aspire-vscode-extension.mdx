@@ -15,7 +15,7 @@ import debugSessionsLight from '@assets/get-started/code-extension-debug-light.p
 import { Kbd } from 'starlight-kbd/components';
 
 The official Aspire extension for [Visual Studio Code](https://code.visualstudio.com/) turns VS Code into a first-class environment for building, debugging, and shipping [polyglot](/get-started/glossary/#polyglot) Aspire apps.
-Press <Kbd windows='F5' /> to build your AppHost, start your resources, and debug supported resource types — C#, TypeScript, Python, browser apps, and Azure Functions — alongside the Aspire dashboard.
+Press <Kbd windows='F5' /> to build your AppHost, start your resources, and debug supported resource types — including C#, TypeScript, Java, Python, browser apps, and Azure Functions — alongside the Aspire dashboard.
 
 :::note[Prerequisites]
 A recent version of [Visual Studio Code](https://code.visualstudio.com/) and the **Aspire CLI** — install the CLI via the **Aspire: Install Aspire CLI** command from the Command Palette, or follow the [installation guide](/get-started/install-cli/).
@@ -75,6 +75,35 @@ When you create or initialize an Aspire project, you can choose to configure AI 
   skills](/get-started/aspire-skills/).
 </LearnMore>
 :::
+
+## Let coding agents start and stop AppHosts
+
+In Aspire 13.6, the extension exposes two VS Code language model tools so a coding agent can use the editor's AppHost lifecycle instead of launching an unrelated CLI process:
+
+| Tool                   | Chat reference        | Action                                               |
+| ---------------------- | --------------------- | ---------------------------------------------------- |
+| `aspire_apphost_start` | `#aspireStartAppHost` | Start a discovered AppHost in `run` or `debug` mode. |
+| `aspire_apphost_stop`  | `#aspireStopAppHost`  | Stop the selected discovered AppHost.                |
+
+Open a trusted workspace with the Aspire extension installed and an AppHost visible in the Aspire view. In an agent chat that supports VS Code tools, try:
+
+> Use #aspireStartAppHost to start my discovered AppHost in debug mode.
+
+> Use #aspireStopAppHost to stop that AppHost.
+
+Both tools request confirmation for the resolved target. Review its path and, for start, the requested mode before approving. These are extension-provided tools; configuring a runtime MCP server isn't required to use them.
+
+The tools accept only buildable AppHosts returned by the extension's discovery service, not arbitrary filesystem paths supplied by an agent. If a selector is unknown or ambiguous, the result includes `knownAppHosts` so the agent can choose a discovered target. Multi-root workspaces use folder-qualified selectors.
+
+Before starting, the extension checks its own sessions and running AppHosts to avoid duplicate launches. Stop coordinates the editor's matching Aspire debug session when one exists; otherwise, it uses `aspire stop --apphost` for the resolved AppHost. It doesn't mean "stop every Aspire process."
+
+:::note[Tool availability]
+The workspace must be trusted, and the VS Code host must support the language model tool API. If the tools aren't available, update VS Code and the Aspire extension, confirm that discovery finds your AppHost, and check that your agent chat has access to these tools.
+:::
+
+<LearnMore>
+  See [Use AI coding agents with Aspire](/get-started/ai-coding-agents/).
+</LearnMore>
 
 ## Live editor integration
 
@@ -203,12 +232,13 @@ For more information, see [Aspire publishing and deployment overview](/deploymen
 
 The extension detects each resource's language and attaches the right debugger:
 
-| Language | Debugger | Required VS Code extension |
-|---|---|---|
-| Node.js / Browser apps | `js-debug` | None (built into VS Code) |
-| Python | `debugpy` | [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) |
-| C# / .NET | `coreclr` | [C# Dev Kit](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit) (recommended) or [C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp) |
-| Azure Functions | Per language | [Azure Functions](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) plus the language extension for your function app (C#, JavaScript/TypeScript, or Python) |
+| Language               | Debugger     | Required VS Code extension                                                                                                                                                                          |
+| ---------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js / Browser apps | `js-debug`   | None (built into VS Code)                                                                                                                                                                           |
+| Python                 | `debugpy`    | [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python)                                                                                                                      |
+| Java                   | `java`       | [Language Support for Java](https://marketplace.visualstudio.com/items?itemName=redhat.java) and [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) |
+| C# / .NET              | `coreclr`    | [C# Dev Kit](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit) (recommended) or [C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp)          |
+| Azure Functions        | Per language | [Azure Functions](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) plus the language extension for your function app (C#, JavaScript/TypeScript, or Python) |
 
 ## Feedback and issues
 

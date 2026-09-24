@@ -140,6 +140,11 @@ The new `Aspire.Hosting.Java` package supports executable JARs, Maven and Gradle
 
 The generated container path uses the repository's Maven or Gradle wrapper rather than a machine-global tool, rejects paths outside the build context, and runs the application as a non-root user.
 
+<LearnMore>
+  See [Java hosting and Toolkit
+  migration](/integrations/frameworks/java/java-host/).
+</LearnMore>
+
 #### 🦀 Rust
 
 The new `Aspire.Hosting.Rust` package models Cargo applications through `AddRustApp` / `addRustApp`. Configure the Cargo binary target, arguments, and features independently from application arguments, then let Aspire generate a multi-stage Dockerfile for publish and deploy. Visual Studio Code can discover, run, and debug both Rust resources and `apphost.rs` AppHosts.
@@ -366,8 +371,8 @@ The new experimental `Aspire.Hosting.Azure.Provisioning.*` packages expose Azure
 These packages extend existing hosting integrations; they aren't new deployment targets, and installing a hosting package doesn't automatically install its provisioning proxies. The shared runtime reports `ASPIREAZUREPROVISIONING001`, and the projected SDK surface has documented exclusions.
 
 <LearnMore>
-  See the [Azure Provisioning package inventory and compatibility
-  boundaries](https://github.com/microsoft/aspire/blob/a11eca9611073f7cf66fa87faac63c2119e87713/src/Aspire.Hosting.Azure.Provisioning/README.md).
+  See [typed Azure infrastructure
+  customization](/integrations/cloud/azure/customize-resources/#enable-typed-provisioning-proxies).
 </LearnMore>
 
 #### Deployment state and output improvements
