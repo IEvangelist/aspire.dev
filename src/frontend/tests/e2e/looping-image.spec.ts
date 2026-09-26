@@ -20,8 +20,11 @@ test('themed animations load one initial source and preserve playback when switc
   const button = wrapper.locator('.looping-image-toggle');
   const canvas = wrapper.locator('canvas');
   await expect(image).toHaveAttribute('src', /dashboard-geni-visualizer-light/);
-  await expect.poll(() => image.evaluate((element: HTMLImageElement) =>
-    element.complete && element.naturalWidth > 0)).toBe(true);
+  await expect
+    .poll(() =>
+      image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)
+    )
+    .toBe(true);
   expect(animationRequests.some((url) => url.includes('visualizer-light'))).toBe(true);
   expect(animationRequests.some((url) => url.includes('visualizer-dark'))).toBe(false);
 
@@ -31,16 +34,25 @@ test('themed animations load one initial source and preserve playback when switc
   await expect(button).toHaveAttribute('data-state', 'paused');
   await expect(canvas).toBeVisible();
   const lightPixel = await canvas.evaluate((element: HTMLCanvasElement) =>
-    Array.from(element.getContext('2d')!.getImageData(0, 0, 1, 1).data));
+    Array.from(element.getContext('2d')!.getImageData(0, 0, 1, 1).data)
+  );
 
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
   await expect(image).toHaveAttribute('src', /dashboard-geni-visualizer-dark/);
-  await expect.poll(() => image.evaluate((element: HTMLImageElement) =>
-    element.complete && element.naturalWidth > 0)).toBe(true);
+  await expect
+    .poll(() =>
+      image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)
+    )
+    .toBe(true);
   await expect(button).toHaveAttribute('data-state', 'paused');
   await expect(canvas).toBeVisible();
-  await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) =>
-    Array.from(element.getContext('2d')!.getImageData(0, 0, 1, 1).data))).not.toEqual(lightPixel);
+  await expect
+    .poll(() =>
+      canvas.evaluate((element: HTMLCanvasElement) =>
+        Array.from(element.getContext('2d')!.getImageData(0, 0, 1, 1).data)
+      )
+    )
+    .not.toEqual(lightPixel);
 
   await wrapper.hover();
   await button.click();

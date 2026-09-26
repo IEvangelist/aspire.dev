@@ -71,10 +71,18 @@ const height = image.height;
 {
   light && (
     <noscript>
-      <style is:inline>
-        .looping-image-wrapper[data-themed-animation] { display: none; }
-      </style>
-      <img class="looping-image-fallback" src={light.src} alt={alt} width={width} height={height} {...rest} />
+      <style
+        is:inline
+        set:html=".looping-image-wrapper[data-themed-animation] { display: none; }"
+      />
+      <img
+        class="looping-image-fallback"
+        src={light.src}
+        alt={alt}
+        width={width}
+        height={height}
+        {...rest}
+      />
     </noscript>
   )
 }
