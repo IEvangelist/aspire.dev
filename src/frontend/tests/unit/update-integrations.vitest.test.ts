@@ -329,6 +329,23 @@ describe('integration update automation', () => {
       /test:unit:structured-data\s+if \(\$LASTEXITCODE -ne 0\) \{[^}]*exit 1/
     );
   });
+
+  test('syncs, validates, allows, and stages Aspire CLI config schemas', () => {
+    const packageJson = JSON.parse(
+      readFileSync(path.join(frontendRoot, 'package.json'), 'utf8')
+    ) as { scripts: Record<string, string> };
+    const structuredDataConfig = readFileSync(
+      path.join(frontendRoot, 'vitest.structured-data.config.ts'),
+      'utf8'
+    );
+    const allowedPaths = script.match(/\$AllowedPaths = @\(([\s\S]*?)\)/)?.[1];
+    const stagedPaths = workflow.match(/git add -- \\[\s\S]*?\r?\n\r?\n/)?.[0];
+
+    expect(packageJson.scripts['update:all']).toContain('pnpm update:schemas');
+    expect(structuredDataConfig).toContain("'tests/unit/cli-config-schema.vitest.test.ts'");
+    expect(allowedPaths).toContain("'src/frontend/src/data/schemas/'");
+    expect(stagedPaths).toContain('src/frontend/src/data/schemas');
+  });
 });
 
 describe('Community Toolkit documentation mappings', () => {

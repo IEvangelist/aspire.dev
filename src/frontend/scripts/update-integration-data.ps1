@@ -10,7 +10,8 @@
     reliable scripting that runs identically in CI and locally.
 
     Phases:
-      1. `pnpm update:all` — integration metadata, GitHub stats, samples, official blog archive.
+      1. `pnpm update:all` — integration metadata, GitHub stats, samples, official blog archive,
+         and Aspire CLI config schemas for new microsoft/aspire releases.
          Reconciles documentation mappings, then runs structured-data tests.
       2. Version-change detection — compares the committed
          aspire-integrations.json against the freshly written one by package
@@ -76,6 +77,7 @@ $AllowedPaths = @(
     'src/frontend/src/data/github-stats.json',
     'src/frontend/src/data/samples.json',
     'src/frontend/src/data/aspire-blog-posts.json',
+    'src/frontend/src/data/schemas/',
     'src/frontend/src/assets/samples/',
     'src/frontend/src/data/pkgs/',
     'src/frontend/src/data/ts-modules/',
@@ -572,6 +574,7 @@ $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine("- ``src/frontend/src/data/github-stats.json`` — repository statistics")
 [void]$sb.AppendLine("- ``src/frontend/src/data/samples.json`` — sample metadata, when changed")
 [void]$sb.AppendLine("- ``src/frontend/src/data/aspire-blog-posts.json`` — complete official Aspire blog metadata, when changed")
+[void]$sb.AppendLine("- ``src/frontend/src/data/schemas/`` — Aspire CLI config schemas, when microsoft/aspire ships a new release")
 [void]$sb.AppendLine("- ``src/frontend/src/assets/samples/`` — sample thumbnails, when changed")
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine("### API reference regeneration")
