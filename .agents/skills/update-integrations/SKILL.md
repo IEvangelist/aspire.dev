@@ -265,10 +265,12 @@ The one exception is a known scanner defect: a method inherited by several proxy
 types is exported once per derived type under the base type's capability ID, and the
 scanner reports each collision as a `Duplicate capability` error. When a dump exits
 nonzero after writing its JSON, the script passes `--tolerate-known-scanner-diagnostics`
-to the transformer, which accepts only that diagnostic shape. Any other error
-diagnostic, or a nonzero exit without one, still fails the package. The script lists
-tolerated diagnostics in its summary, and `update-integration-data.ps1` raises a CI
-warning and lists the affected packages in the pull request body. Remove the tolerance
+to the transformer, which accepts only that diagnostic shape, and only when the dump's
+`HandleTypes` show that each defining type is, or derives from, the type that owns the
+capability ID. Any other error diagnostic, or a nonzero exit without one, still fails the
+package. The script lists tolerated diagnostics in its summary, and
+`update-integration-data.ps1` raises a CI warning and lists the affected packages in the
+pull request body. Remove the tolerance
 once the shipped Aspire CLI includes [microsoft/aspire#20443](https://github.com/microsoft/aspire/pull/20443).
 
 Packages are generated in waves: `Aspire.Hosting` first, then packages that don't need

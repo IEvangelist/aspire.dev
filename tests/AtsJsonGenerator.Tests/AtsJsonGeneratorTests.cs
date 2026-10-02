@@ -494,6 +494,7 @@ public sealed class AtsJsonGeneratorTests
         var outputPath = Path.Combine(tempDirectory.Path, "output.json");
         File.WriteAllText(inputPath, JsonSerializer.Serialize(new AtsDumpRoot
         {
+            HandleTypes = AtsTransformerHelperTests.KnownProxyHandleTypes,
             Diagnostics =
             [
                 new() { Severity = "Error", Message = AtsTransformerHelperTests.KustoInheritedDuplicate },

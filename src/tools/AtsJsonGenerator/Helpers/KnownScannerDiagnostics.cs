@@ -21,7 +21,11 @@ internal static partial class KnownScannerDiagnostics
     /// <summary>
     /// Returns whether <paramref name="message"/> reports the inherited duplicate capability defect.
     /// </summary>
-    public static bool IsInheritedDuplicateCapability(string message)
+    /// <remarks>
+    /// Both definitions must be handle types in <paramref name="dump"/> that are, or derive from, the
+    /// type that owns the capability ID. Unrelated types that share a capability ID are a genuine collision.
+    /// </remarks>
+    public static bool IsInheritedDuplicateCapability(string message, AtsDumpRoot dump)
     {
         var match = InheritedDuplicateCapabilityPattern().Match(message);
         if (!match.Success)
@@ -30,14 +34,17 @@ internal static partial class KnownScannerDiagnostics
         }
 
         var capabilityNamespace = match.Groups["namespace"].Value;
+        var capabilityTypeName = $"{capabilityNamespace}.{match.Groups["type"].Value}";
         var first = SplitQualifiedMember(match.Groups["first"].Value);
         var second = SplitQualifiedMember(match.Groups["second"].Value);
 
         return first.Namespace.Equals(capabilityNamespace, StringComparison.Ordinal)
             && second.Namespace.Equals(capabilityNamespace, StringComparison.Ordinal)
-            && !first.Type.Equals(second.Type, StringComparison.Ordinal)
+            && !first.TypeName.Equals(second.TypeName, StringComparison.Ordinal)
             && first.Member.Equals(second.Member, StringComparison.Ordinal)
-            && first.Member.Equals(match.Groups["method"].Value, StringComparison.OrdinalIgnoreCase);
+            && first.Member.Equals(match.Groups["method"].Value, StringComparison.OrdinalIgnoreCase)
+            && IsSameOrDerivedHandleType(dump, first.TypeName, capabilityTypeName)
+            && IsSameOrDerivedHandleType(dump, second.TypeName, capabilityTypeName);
     }
 
     /// <summary>
@@ -45,23 +52,31 @@ internal static partial class KnownScannerDiagnostics
     /// </summary>
     public static IReadOnlyList<string> GetToleratedErrors(AtsDumpRoot dump) =>
         AtsTransformer.GetErrorDiagnostics(dump)
-            .Where(IsInheritedDuplicateCapability)
+            .Where(message => IsInheritedDuplicateCapability(message, dump))
             .ToArray();
 
-    private static (string Namespace, string Type, string Member) SplitQualifiedMember(string qualifiedMember)
+    private static bool IsSameOrDerivedHandleType(AtsDumpRoot dump, string typeName, string baseTypeName)
+    {
+        var handleType = dump.HandleTypes.FirstOrDefault(handle =>
+            AtsTransformer.StripAssemblyPrefix(handle.AtsTypeId).Equals(typeName, StringComparison.Ordinal));
+
+        return handleType is not null
+            && (typeName.Equals(baseTypeName, StringComparison.Ordinal)
+                || handleType.BaseTypeHierarchy.Any(baseType =>
+                    AtsTransformer.StripAssemblyPrefix(baseType.TypeId).Equals(baseTypeName, StringComparison.Ordinal)));
+    }
+
+    private static (string Namespace, string TypeName, string Member) SplitQualifiedMember(string qualifiedMember)
     {
         // The pattern guarantees at least three non-empty dot-separated segments.
         var memberSeparator = qualifiedMember.LastIndexOf('.');
-        var typeSeparator = qualifiedMember.LastIndexOf('.', memberSeparator - 1);
+        var typeName = qualifiedMember[..memberSeparator];
 
-        return (
-            qualifiedMember[..typeSeparator],
-            qualifiedMember[(typeSeparator + 1)..memberSeparator],
-            qualifiedMember[(memberSeparator + 1)..]);
+        return (typeName[..typeName.LastIndexOf('.')], typeName, qualifiedMember[(memberSeparator + 1)..]);
     }
 
     [GeneratedRegex(
-        @"^Duplicate capability '(?<namespace>\w+(?:\.\w+)*)/\w+\.(?<method>\w+)': defined at '(?<first>\w+(?:\.\w+){2,})' and '(?<second>\w+(?:\.\w+){2,})'\. Remove \[AspireExport\] from one of them or use different capability IDs\.\z",
+        @"^Duplicate capability '(?<namespace>\w+(?:\.\w+)*)/(?<type>\w+)\.(?<method>\w+)': defined at '(?<first>\w+(?:\.\w+){2,})' and '(?<second>\w+(?:\.\w+){2,})'\. Remove \[AspireExport\] from one of them or use different capability IDs\.\z",
         RegexOptions.CultureInvariant)]
     private static partial Regex InheritedDuplicateCapabilityPattern();
 }

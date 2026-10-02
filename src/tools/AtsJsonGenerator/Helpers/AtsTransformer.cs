@@ -23,7 +23,7 @@ internal static class AtsTransformer
         bool tolerateKnownScannerDiagnostics = false)
     {
         var errors = GetErrorDiagnostics(dump)
-            .Where(message => !tolerateKnownScannerDiagnostics || !KnownScannerDiagnostics.IsInheritedDuplicateCapability(message))
+            .Where(message => !tolerateKnownScannerDiagnostics || !KnownScannerDiagnostics.IsInheritedDuplicateCapability(message, dump))
             .ToArray();
         if (errors.Length > 0)
         {
