@@ -1,26 +1,34 @@
 /**
- * Syncs the aspire-config JSON Schema from microsoft/aspire into versioned
- * copies under src/data/schemas/, then updates the version index.
+ * Generates the aspire-config JSON Schema for each stable microsoft/aspire
+ * release into versioned copies under src/data/schemas/, then updates the
+ * version index.
  *
- * Every stable (non-prerelease, non-draft) microsoft/aspire release that ships
- * the schema gets its own copy, so pinned
+ * Every stable (non-prerelease, non-draft) microsoft/aspire release from 13.2.0
+ * on gets its own copy, so pinned
  * https://aspire.dev/reference/cli/configuration/schema/<version>.json URLs
- * resolve for any shipped release. A release's schema never changes after it
- * ships, so existing copies are never re-fetched or overwritten, and the index's
- * `latest` is always the highest version. The scheduled Integration Data
- * Updater workflow runs this script through `pnpm update:all`, so new releases
- * are picked up automatically, and it rejects any change to an existing copy.
+ * resolve for any shipped release. Each schema is generated from that release's
+ * own Aspire CLI: the script installs the Aspire.Cli .NET tool at the release
+ * version, reads `aspire config info --json`, and builds the schema the same
+ * way as microsoft/aspire's extension/scripts/generate-schema.js. The schema
+ * file checked in to microsoft/aspire isn't used, because it wasn't regenerated
+ * for the 13.3 and 13.4 releases and doesn't match their CLI.
+ *
+ * A release's schema never changes after it ships, so existing copies are never
+ * regenerated or overwritten, and the index's `latest` is always the highest
+ * version. The scheduled Integration Data Updater workflow runs this script
+ * through `pnpm update:all`, so new releases are picked up automatically, and it
+ * rejects any change to an existing copy.
+ *
+ * Requires the .NET SDK on PATH.
  *
  * Usage:
- *   pnpm update:schemas                                      # sync every stable release
- *   pnpm update:schemas -- --version 13.2.3                  # sync a single version tag
- *   pnpm update:schemas -- --version 13.3.0 --ref <sha|ref>  # label as 13.3.0 but fetch from
- *                                                            # the given commit SHA or branch ref
- *                                                            # (used before the v<version> tag is
- *                                                            # published)
+ *   pnpm update:schemas                       # sync every stable release
+ *   pnpm update:schemas -- --version 13.2.3   # sync a single released version
  */
 
+import { execFileSync } from 'child_process';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -30,7 +38,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND_ROOT = path.resolve(__dirname, '..');
 
 const ASPIRE_REPO = 'microsoft/aspire';
-const SCHEMA_SOURCE_PATH = 'extension/schemas/aspire-config.schema.json';
+const CLI_PACKAGE_ID = 'Aspire.Cli';
 const SCHEMAS_DIR = path.join(FRONTEND_ROOT, 'src', 'data', 'schemas');
 const INDEX_FILE = path.join(SCHEMAS_DIR, 'index.json');
 
@@ -56,11 +64,29 @@ interface SchemaIndex {
   versions: string[];
 }
 
-/** A schema version and the microsoft/aspire git ref to fetch it from. */
-interface SchemaSource {
-  version: string;
-  ref: string;
+/** A property from `aspire config info --json`. */
+interface ConfigPropertyInfo {
+  name: string;
+  type: string;
+  description: string;
+  required: boolean;
+  subProperties?: ConfigPropertyInfo[];
+  additionalPropertiesType?: string;
 }
+
+/** A feature flag from `aspire config info --json`. */
+interface ConfigFeatureInfo {
+  name: string;
+  description: string;
+  defaultValue: boolean;
+}
+
+interface ConfigInfo {
+  availableFeatures: ConfigFeatureInfo[];
+  configFileProperties: ConfigPropertyInfo[];
+}
+
+type JsonObject = Record<string, unknown>;
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -84,8 +110,8 @@ function schemaFilePath(version: string): string {
   return path.join(SCHEMAS_DIR, schemaFileName(version));
 }
 
-/** Fetch every stable microsoft/aspire release that ships the schema, oldest first. */
-async function fetchStableSchemaSources(): Promise<SchemaSource[]> {
+/** Fetch every stable microsoft/aspire release version that ships the schema, oldest first. */
+async function fetchStableSchemaVersions(): Promise<string[]> {
   const headers: Record<string, string> = {
     'User-Agent': 'aspire-schema-updater',
     Accept: 'application/vnd.github.v3+json',
@@ -94,7 +120,7 @@ async function fetchStableSchemaSources(): Promise<SchemaSource[]> {
     headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
   }
 
-  const sources = new Map<string, SchemaSource>();
+  const versions = new Set<string>();
   for (let page = 1; ; page++) {
     const url =
       `https://api.github.com/repos/${ASPIRE_REPO}/releases` +
@@ -117,7 +143,7 @@ async function fetchStableSchemaSources(): Promise<SchemaSource[]> {
       }
 
       if (compareVersions(version, MIN_SCHEMA_VERSION) >= 0) {
-        sources.set(version, { version, ref: release.tag_name });
+        versions.add(version);
       }
     }
 
@@ -126,24 +152,203 @@ async function fetchStableSchemaSources(): Promise<SchemaSource[]> {
     }
   }
 
-  if (sources.size === 0) {
+  if (versions.size === 0) {
     throw new Error(`No stable ${ASPIRE_REPO} release found at or after ${MIN_SCHEMA_VERSION}`);
   }
 
-  return [...sources.values()].sort((a, b) => compareVersions(a.version, b.version));
+  return [...versions].sort(compareVersions);
 }
 
-/** Fetch the raw schema JSON from microsoft/aspire at the given git ref (tag, branch, or SHA). */
-async function fetchSchemaAtRef(ref: string): Promise<Record<string, unknown>> {
-  const rawUrl =
-    `https://raw.githubusercontent.com/${ASPIRE_REPO}/${ref}/${SCHEMA_SOURCE_PATH}`;
-  const res = await fetch(rawUrl, {
-    headers: { 'User-Agent': 'aspire-schema-updater' },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch schema at ref ${ref}: ${res.status} ${res.statusText}`);
+function readField(source: JsonObject, name: string): unknown {
+  return source[name] ?? source[name.charAt(0).toUpperCase() + name.slice(1)];
+}
+
+function readArray(source: JsonObject, name: string): JsonObject[] {
+  const value = readField(source, name);
+  if (!Array.isArray(value)) {
+    throw new Error(`Expected config info ${name} to be an array.`);
   }
-  return (await res.json()) as Record<string, unknown>;
+  return value as JsonObject[];
+}
+
+function readString(source: JsonObject, name: string): string {
+  const value = readField(source, name);
+  if (typeof value !== 'string') {
+    throw new Error(`Expected config info ${name} to be a string.`);
+  }
+  return value;
+}
+
+function readBoolean(source: JsonObject, name: string): boolean {
+  const value = readField(source, name);
+  if (typeof value !== 'boolean') {
+    throw new Error(`Expected config info ${name} to be a boolean.`);
+  }
+  return value;
+}
+
+/** Normalize a property; the CLI emits PascalCase in 13.2 and camelCase from 13.3 on. */
+function normalizeProperty(property: JsonObject): ConfigPropertyInfo {
+  const subProperties = readField(property, 'subProperties');
+  const additionalPropertiesType = readField(property, 'additionalPropertiesType');
+  return {
+    name: readString(property, 'name'),
+    type: readString(property, 'type'),
+    description: readString(property, 'description'),
+    required: readBoolean(property, 'required'),
+    ...(subProperties == null
+      ? {}
+      : { subProperties: readArray(property, 'subProperties').map(normalizeProperty) }),
+    ...(additionalPropertiesType == null
+      ? {}
+      : { additionalPropertiesType: readString(property, 'additionalPropertiesType') }),
+  };
+}
+
+function normalizeConfigInfo(raw: JsonObject): ConfigInfo {
+  const configFileSchema = readField(raw, 'configFileSchema') as JsonObject | undefined;
+  if (!configFileSchema) {
+    throw new Error('The CLI config info output has no aspire.config.json schema.');
+  }
+
+  return {
+    availableFeatures: readArray(raw, 'availableFeatures').map((feature) => ({
+      name: readString(feature, 'name'),
+      description: readString(feature, 'description'),
+      defaultValue: readBoolean(feature, 'defaultValue'),
+    })),
+    configFileProperties: readArray(configFileSchema, 'properties').map(normalizeProperty),
+  };
+}
+
+/** Install the released Aspire CLI in a temporary directory and read `aspire config info --json`. */
+function readReleasedConfigInfo(version: string): ConfigInfo {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `aspire-cli-${version}-`));
+  const toolDir = path.join(tempDir, 'tool');
+  const workDir = path.join(tempDir, 'work');
+  fs.mkdirSync(workDir);
+
+  const env = {
+    ...process.env,
+    ASPIRE_CLI_TELEMETRY_OPTOUT: '1',
+    DOTNET_CLI_TELEMETRY_OPTOUT: '1',
+    DOTNET_NOLOGO: '1',
+  };
+
+  try {
+    execFileSync(
+      'dotnet',
+      ['tool', 'install', CLI_PACKAGE_ID, '--version', version, '--tool-path', toolDir],
+      { env, stdio: 'pipe' }
+    );
+
+    // 13.2 installs aspire.exe on Windows; later releases install an aspire.cmd shim.
+    const cli = ['aspire.exe', 'aspire.cmd', 'aspire']
+      .map((name) => path.join(toolDir, name))
+      .find((candidate) => fs.existsSync(candidate));
+    if (!cli) {
+      throw new Error(`The ${CLI_PACKAGE_ID} ${version} tool has no aspire executable.`);
+    }
+
+    // Node only runs .cmd files through a shell; the arguments are fixed literals.
+    const output = execFileSync(cli, ['config', 'info', '--json'], {
+      cwd: workDir,
+      encoding: 'utf-8',
+      env,
+      shell: cli.endsWith('.cmd'),
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    const json = output.slice(output.indexOf('{'), output.lastIndexOf('}') + 1);
+    return normalizeConfigInfo(JSON.parse(json) as JsonObject);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+const BOOLEAN_SCHEMA = [{ type: 'boolean' }, { type: 'string', enum: ['true', 'false'] }];
+
+/** Mirrors createPropertySchema in microsoft/aspire's extension/scripts/generate-schema.js. */
+function createPropertySchema(prop: ConfigPropertyInfo, info: ConfigInfo): JsonObject {
+  const schema: JsonObject = { description: prop.description };
+  const type = prop.type.toLowerCase();
+
+  if (type === 'string') {
+    schema.type = 'string';
+  } else if (type === 'boolean') {
+    schema.anyOf = BOOLEAN_SCHEMA;
+  } else if (type === 'number' || type === 'integer') {
+    schema.type = type;
+  } else if (type === 'array') {
+    schema.type = 'array';
+    schema.items = {};
+  } else if (type === 'object') {
+    schema.type = 'object';
+
+    if (prop.name === 'features') {
+      const properties: JsonObject = {};
+      for (const feature of info.availableFeatures) {
+        properties[feature.name] = {
+          anyOf: BOOLEAN_SCHEMA,
+          description: feature.description,
+          default: feature.defaultValue,
+        };
+      }
+      schema.properties = properties;
+      schema.additionalProperties = false;
+    } else if (prop.subProperties && prop.subProperties.length > 0) {
+      const properties: JsonObject = {};
+      for (const subProp of prop.subProperties) {
+        properties[subProp.name] = createPropertySchema(subProp, info);
+      }
+
+      if (prop.additionalPropertiesType === 'object') {
+        schema.additionalProperties = {
+          type: 'object',
+          properties,
+          additionalProperties: false,
+        };
+      } else {
+        schema.properties = properties;
+        schema.additionalProperties = false;
+      }
+    } else if (prop.additionalPropertiesType) {
+      schema.additionalProperties = { type: prop.additionalPropertiesType };
+    } else if (prop.name === 'packages') {
+      schema.additionalProperties = { type: 'string', description: 'Package version' };
+    } else {
+      schema.additionalProperties = true;
+    }
+  } else {
+    schema.type = 'string';
+  }
+
+  return schema;
+}
+
+/** Mirrors generateJsonSchema in microsoft/aspire's extension/scripts/generate-schema.js. */
+function generateSchema(version: string, info: ConfigInfo): JsonObject {
+  const properties: JsonObject = {};
+  const required: string[] = [];
+  for (const prop of info.configFileProperties) {
+    properties[prop.name] = createPropertySchema(prop, info);
+    if (prop.required) {
+      required.push(prop.name);
+    }
+  }
+  properties['$schema'] = { type: 'string', description: 'JSON Schema reference' };
+
+  return {
+    $schema: 'http://json-schema.org/draft-07/schema#',
+    $id: `${SITE_ORIGIN}${SCHEMA_BASE_PATH}/${version}.json`,
+    type: 'object',
+    title: 'Aspire Configuration',
+    description:
+      'Aspire CLI unified configuration file (aspire.config.json). Replaces .aspire/settings.json and apphost.run.json.',
+    properties,
+    ...(required.length > 0 ? { required } : {}),
+    additionalProperties: false,
+  };
 }
 
 /** Read the current index, or return an empty one if it doesn't exist yet. */
@@ -175,18 +380,15 @@ function writeIndex(index: SchemaIndex): void {
   }
 }
 
-/** Fetch and save the schema for a version unless a copy already exists. Returns true if saved. */
-async function syncSchema({ version, ref }: SchemaSource): Promise<boolean> {
+/** Generate and save the schema for a version unless a copy already exists. Returns true if saved. */
+function syncSchema(version: string): boolean {
   const outFile = schemaFilePath(version);
   if (fs.existsSync(outFile)) {
     return false;
   }
 
-  console.log(`⬇️  Fetching schema for ${version} from ${ASPIRE_REPO} @ ${ref}…`);
-  const schema = await fetchSchemaAtRef(ref);
-
-  // Update $id to point to the versioned aspire.dev URL
-  schema['$id'] = `${SITE_ORIGIN}${SCHEMA_BASE_PATH}/${version}.json`;
+  console.log(`⬇️  Generating the schema for ${version} from ${CLI_PACKAGE_ID} ${version}…`);
+  const schema = generateSchema(version, readReleasedConfigInfo(version));
 
   fs.mkdirSync(SCHEMAS_DIR, { recursive: true });
   fs.writeFileSync(outFile, JSON.stringify(schema, null, 2) + '\n', 'utf-8');
@@ -196,36 +398,31 @@ async function syncSchema({ version, ref }: SchemaSource): Promise<boolean> {
 
 async function main(): Promise<void> {
   const pinnedVersion = getArgValue('--version')?.replace(/^v/, '');
-  const ref = getArgValue('--ref');
 
-  let sources: SchemaSource[];
+  let versions: string[];
   if (pinnedVersion) {
     console.log(`📌 Using pinned version: ${pinnedVersion}`);
-    sources = [{ version: pinnedVersion, ref: ref ?? `v${pinnedVersion}` }];
-  } else if (ref) {
-    throw new Error('--ref requires --version to label the schema fetched from that ref');
+    versions = [pinnedVersion];
   } else {
     console.log(`🔍 Fetching stable releases from ${ASPIRE_REPO}…`);
-    sources = await fetchStableSchemaSources();
-    console.log(`✅ Found ${sources.length} stable releases that ship the schema`);
+    versions = await fetchStableSchemaVersions();
+    console.log(`✅ Found ${versions.length} stable releases that ship the schema`);
   }
 
   let savedCount = 0;
-  for (const source of sources) {
-    if (await syncSchema(source)) {
+  for (const version of versions) {
+    if (syncSchema(version)) {
       savedCount++;
     }
   }
   if (savedCount === 0) {
-    console.log('ℹ️  All schemas already exist; nothing to fetch.');
+    console.log('ℹ️  All schemas already exist; nothing to generate.');
   }
 
   // Update the index. `latest` is the highest version, so an out-of-band patch
   // for an older minor release never replaces a newer latest version.
   const index = readIndex();
-  index.versions = [...new Set([...index.versions, ...sources.map((s) => s.version)])].sort(
-    compareVersions
-  );
+  index.versions = [...new Set([...index.versions, ...versions])].sort(compareVersions);
   index.latest = index.versions[index.versions.length - 1];
 
   writeIndex(index);

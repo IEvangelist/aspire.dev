@@ -361,6 +361,18 @@ describe('integration update automation', () => {
       scopeCheck.indexOf('All changes are within the allowed data paths.')
     );
   });
+
+  test('generates Aspire CLI config schemas from each released CLI', () => {
+    const schemaScript = readFileSync(
+      path.join(frontendRoot, 'scripts', 'update-schemas.ts'),
+      'utf-8'
+    );
+
+    expect(schemaScript).toContain("'tool', 'install', CLI_PACKAGE_ID, '--version', version");
+    expect(schemaScript).toContain("['config', 'info', '--json']");
+    expect(schemaScript).not.toContain('extension/schemas/aspire-config.schema.json');
+    expect(workflow).toContain('actions/setup-dotnet');
+  });
 });
 
 describe('Community Toolkit documentation mappings', () => {
