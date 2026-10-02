@@ -676,30 +676,52 @@ function Invoke-PackageRestore {
     [CmdletBinding()]
     param([Parameter(Mandatory)][object]$Request)
 
-    # This can run in a ForEach-Object -Parallel runspace, so failures are
-    # returned as data and reported by the main runspace in package order.
+    # This can run in a ForEach-Object -Parallel runspace, so it doesn't write to
+    # the host. Its status and retry warnings are returned as data for the main
+    # runspace to print as each restore completes. Failure details are reported
+    # in package order after all restores finish.
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $graph = $null
     $errorMessage = $null
+    $restoreWarnings = @()
     try {
         $graph = Resolve-NuGetPackageRestoreGraph `
             -PackageId $Request.PackageId `
             -Version $Request.Version `
             -RestoreSources $Request.RestoreSources `
-            -HostingVersion $Request.HostingVersion
+            -HostingVersion $Request.HostingVersion `
+            -WarningAction SilentlyContinue `
+            -WarningVariable restoreWarnings
     }
     catch {
         $errorMessage = "$_"
     }
 
-    $status = if ($null -eq $errorMessage) { "Restored" } else { "Restore failed" }
-    $color = if ($null -eq $errorMessage) { "Yellow" } else { "Red" }
-    Write-Host ("  {0}: {1} {2} from {3} ({4:N1}s)" -f $status, $Request.PackageId, $Request.Version, $Request.DisplaySource, $stopwatch.Elapsed.TotalSeconds) -ForegroundColor $color
-
     return [PSCustomObject]@{
-        PackageId = $Request.PackageId
-        Graph     = $graph
-        Error     = $errorMessage
+        PackageId     = $Request.PackageId
+        Version       = $Request.Version
+        DisplaySource = $Request.DisplaySource
+        Graph         = $graph
+        Error         = $errorMessage
+        Warnings      = @($restoreWarnings | ForEach-Object { $_.Message })
+        Elapsed       = $stopwatch.Elapsed
+    }
+}
+
+# Prints a restore's retry warnings and status on the main runspace, then passes
+# the result through.
+function Write-PackageRestoreStatus {
+    [CmdletBinding()]
+    param([Parameter(Mandatory, ValueFromPipeline)][psobject]$Outcome)
+
+    process {
+        foreach ($warning in $Outcome.Warnings) {
+            Write-Warning $warning
+        }
+        $status = if ($null -eq $Outcome.Error) { "Restored" } else { "Restore failed" }
+        $color = if ($null -eq $Outcome.Error) { "Yellow" } else { "Red" }
+        Write-Host ("  {0}: {1} {2} from {3} ({4:N1}s)" -f $status, $Outcome.PackageId, $Outcome.Version, $Outcome.DisplaySource, $Outcome.Elapsed.TotalSeconds) -ForegroundColor $color
+        $Outcome
     }
 }
 
@@ -946,7 +968,7 @@ New-Item -ItemType Directory -Path (Join-Path $ScriptDir ".package-json-generato
 $restoreStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $restoreResults = if ($restoreParallelism -le 1 -or $restoreRequests.Count -le 1) {
     foreach ($request in $restoreRequests) {
-        Invoke-PackageRestore -Request $request
+        Invoke-PackageRestore -Request $request | Write-PackageRestoreStatus
     }
 }
 else {
@@ -971,7 +993,7 @@ else {
         $ScriptDir = $using:ScriptDir
         $Framework = $using:Framework
         Invoke-PackageRestore -Request $_
-    }
+    } | Write-PackageRestoreStatus
 }
 
 $restoreResultsById = @{}
