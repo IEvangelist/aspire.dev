@@ -23,7 +23,7 @@
  *
  * Usage:
  *   pnpm update:schemas                       # sync every stable release
- *   pnpm update:schemas -- --version 13.2.3   # sync a single released version
+ *   pnpm update:schemas -- --version 13.2.3   # sync a single released version, 13.2.0 or later
  */
 
 import { execFileSync } from 'child_process';
@@ -221,6 +221,51 @@ function normalizeConfigInfo(raw: JsonObject): ConfigInfo {
   };
 }
 
+/** Run a command and return its stdout, including its output in the error when it fails. */
+function runCommand(
+  description: string,
+  file: string,
+  args: string[],
+  options: { cwd?: string; env: NodeJS.ProcessEnv; shell?: boolean }
+): string {
+  try {
+    return execFileSync(file, args, {
+      ...options,
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch (error) {
+    const { stdout, stderr } = error as { stdout?: string; stderr?: string };
+    const output = [stdout, stderr]
+      .map((stream) => stream?.trim())
+      .filter(Boolean)
+      .join('\n');
+    // Node's message repeats stderr after its first line, so keep only the summary.
+    const summary = getErrorMessage(error).split('\n')[0];
+    throw new Error(`${description} failed: ${summary}${output ? `\n${output}` : ''}`, {
+      cause: error,
+    });
+  }
+}
+
+/** Return the outermost JSON object in the CLI output, ignoring any text around it. */
+function extractJsonObject(output: string, description: string): JsonObject {
+  const start = output.indexOf('{');
+  const end = output.lastIndexOf('}');
+  if (start === -1 || end < start) {
+    throw new Error(`${description} didn't print a JSON object. Output:\n${output.trim()}`);
+  }
+
+  try {
+    return JSON.parse(output.slice(start, end + 1)) as JsonObject;
+  } catch (error) {
+    throw new Error(
+      `${description} printed invalid JSON: ${getErrorMessage(error)}. Output:\n${output.trim()}`,
+      { cause: error }
+    );
+  }
+}
+
 /** Install the released Aspire CLI in a temporary directory and read `aspire config info --json`. */
 function readReleasedConfigInfo(version: string): ConfigInfo {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `aspire-cli-${version}-`));
@@ -236,10 +281,11 @@ function readReleasedConfigInfo(version: string): ConfigInfo {
   };
 
   try {
-    execFileSync(
+    runCommand(
+      `Installing ${CLI_PACKAGE_ID} ${version}`,
       'dotnet',
       ['tool', 'install', CLI_PACKAGE_ID, '--version', version, '--tool-path', toolDir],
-      { env, stdio: 'pipe' }
+      { env }
     );
 
     // 13.2 installs aspire.exe on Windows; later releases install an aspire.cmd shim.
@@ -251,16 +297,14 @@ function readReleasedConfigInfo(version: string): ConfigInfo {
     }
 
     // Node only runs .cmd files through a shell; the arguments are fixed literals.
-    const output = execFileSync(cli, ['config', 'info', '--json'], {
+    const description = `Running aspire config info --json with ${CLI_PACKAGE_ID} ${version}`;
+    const output = runCommand(description, cli, ['config', 'info', '--json'], {
       cwd: workDir,
-      encoding: 'utf-8',
       env,
       shell: cli.endsWith('.cmd'),
-      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
-    const json = output.slice(output.indexOf('{'), output.lastIndexOf('}') + 1);
-    return normalizeConfigInfo(JSON.parse(json) as JsonObject);
+    return normalizeConfigInfo(extractJsonObject(output, description));
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -396,8 +440,25 @@ function syncSchema(version: string): boolean {
   return true;
 }
 
+/** Accept `13.4.4`, `v13.4.4`, or the `v13.4.4-release` tag form, and require a version that ships the schema. */
+function parsePinnedVersion(value: string): string {
+  const version = STABLE_RELEASE_TAG.exec(value.startsWith('v') ? value : `v${value}`)?.[1];
+  if (!version) {
+    throw new Error(
+      `Invalid --version "${value}". Use a stable release version such as ${MIN_SCHEMA_VERSION}.`
+    );
+  }
+  if (compareVersions(version, MIN_SCHEMA_VERSION) < 0) {
+    throw new Error(
+      `--version ${version} is older than ${MIN_SCHEMA_VERSION}, the first release that ships the schema.`
+    );
+  }
+  return version;
+}
+
 async function main(): Promise<void> {
-  const pinnedVersion = getArgValue('--version')?.replace(/^v/, '');
+  const versionArg = getArgValue('--version');
+  const pinnedVersion = versionArg === undefined ? undefined : parsePinnedVersion(versionArg);
 
   let versions: string[];
   if (pinnedVersion) {
