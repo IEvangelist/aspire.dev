@@ -5,10 +5,11 @@
  * Every stable (non-prerelease, non-draft) microsoft/aspire release that ships
  * the schema gets its own copy, so pinned
  * https://aspire.dev/reference/cli/configuration/schema/<version>.json URLs
- * resolve for any shipped release. Existing copies are never re-fetched, and the
- * index's `latest` is always the highest version. The scheduled Integration Data
+ * resolve for any shipped release. A release's schema never changes after it
+ * ships, so existing copies are never re-fetched or overwritten, and the index's
+ * `latest` is always the highest version. The scheduled Integration Data
  * Updater workflow runs this script through `pnpm update:all`, so new releases
- * are picked up automatically.
+ * are picked up automatically, and it rejects any change to an existing copy.
  *
  * Usage:
  *   pnpm update:schemas                                      # sync every stable release

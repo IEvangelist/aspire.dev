@@ -346,6 +346,21 @@ describe('integration update automation', () => {
     expect(allowedPaths).toContain("'src/frontend/src/data/schemas/'");
     expect(stagedPaths).toContain('src/frontend/src/data/schemas');
   });
+
+  test('rejects changes to published Aspire CLI config schemas', () => {
+    const scopeCheck = script.slice(script.indexOf("Write-Section 'Phase 5"));
+
+    expect(scopeCheck).toContain(
+      "$publishedSchemaPattern = '^src/frontend/src/data/schemas/aspire-config\\..+\\.schema\\.json$'"
+    );
+    expect(scopeCheck).toContain("$isNewFile = $statusCode -eq '??' -or $statusCode[0] -eq 'A'");
+    expect(scopeCheck).toMatch(
+      /if \(\$changedPublishedSchemas\.Count -gt 0\) \{[^}]*exit 1/
+    );
+    expect(scopeCheck.indexOf('$changedPublishedSchemas.Count -gt 0')).toBeLessThan(
+      scopeCheck.indexOf('All changes are within the allowed data paths.')
+    );
+  });
 });
 
 describe('Community Toolkit documentation mappings', () => {
