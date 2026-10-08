@@ -82,10 +82,9 @@ const firstSeenKey = bannerHash
           if (!banner) return;
           var data = banner.dataset;
           var now = Date.now();
-          var hide = false;
+          var hide = data.expiresOn ? now >= Number(data.expiresOn) : false;
           try {
-            hide = window.localStorage.getItem(data.dismissKey) === 'true';
-            if (!hide && data.expiresOn) hide = now >= Number(data.expiresOn);
+            if (!hide) hide = window.localStorage.getItem(data.dismissKey) === 'true';
             if (!hide && data.autoDismissDays) {
               var raw = window.localStorage.getItem(data.firstSeenKey);
               var firstSeen = raw !== null && /^\d+$/.test(raw.trim()) ? Number(raw) : 0;
